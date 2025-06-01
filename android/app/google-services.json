@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "388298647945",
+    "project_id": "distro-tracker-pro",
+    "storage_bucket": "distro-tracker-pro.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:388298647945:android:4a1c9ca53e952dedd91958",
+        "android_client_info": {
+          "package_name": "com.example.distro_tracker_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2W_TujS5deosL2mbvS3TlVaVsSCy6ja8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
