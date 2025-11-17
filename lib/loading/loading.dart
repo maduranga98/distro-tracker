@@ -83,7 +83,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
 
       setState(() {
         _vehicles = snapshot.docs
-            .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
+            .map((doc) => {'id': doc.id, ...doc.data()})
             .toList();
         _selectedVehicleId = null;
       });
@@ -228,7 +228,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
                 'distributorPrice': item['distributorPrice'],
                 'totalValue':
                     ((item['distributorPrice'] as num?)?.toDouble() ?? 0.0) *
-                        ((item['loadingQuantity'] as int?) ?? 0),
+                    ((item['loadingQuantity'] as int?) ?? 0),
                 'expiryDate': item['expiryDate'],
                 'supplier': item['supplier'],
               },
@@ -302,10 +302,12 @@ class _LoadingScreenState extends State<LoadingScreen> {
     int currentQuantity = _getLoadingQuantity(itemId);
     int currentFreeIssues = _getFreeIssues(itemId);
 
-    final quantityController =
-        TextEditingController(text: currentQuantity.toString());
-    final freeIssuesController =
-        TextEditingController(text: currentFreeIssues.toString());
+    final quantityController = TextEditingController(
+      text: currentQuantity.toString(),
+    );
+    final freeIssuesController = TextEditingController(
+      text: currentFreeIssues.toString(),
+    );
 
     showDialog(
       context: context,
@@ -422,19 +424,20 @@ class _LoadingScreenState extends State<LoadingScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredItems.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16.0),
-                        itemCount: _filteredItems.length,
-                        itemBuilder: (context, index) {
-                          final item = _filteredItems[index];
-                          return _buildItemCard(item);
-                        },
-                      ),
+                ? _buildEmptyState()
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16.0),
+                    itemCount: _filteredItems.length,
+                    itemBuilder: (context, index) {
+                      final item = _filteredItems[index];
+                      return _buildItemCard(item);
+                    },
+                  ),
           ),
         ],
       ),
-      bottomNavigationBar: _selectedItems.isNotEmpty &&
+      bottomNavigationBar:
+          _selectedItems.isNotEmpty &&
               _selectedDistributionId != null &&
               _selectedVehicleId != null
           ? Container(
@@ -543,8 +546,8 @@ class _LoadingScreenState extends State<LoadingScreen> {
                 prefixIcon: Icon(Icons.local_shipping),
               ),
               items: _vehicles.map((vehicle) {
-                return DropdownMenuItem(
-                  value: vehicle['id'],
+                return DropdownMenuItem<String>(
+                  value: vehicle['id'] as String?,
                   child: Text(vehicle['vehicleName'] ?? 'Unknown'),
                 );
               }).toList(),
@@ -702,14 +705,16 @@ class _LoadingScreenState extends State<LoadingScreen> {
                     ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: maxStock > 50
                           ? Colors.green[100]
                           : maxStock > 20
-                              ? Colors.orange[100]
-                              : Colors.red[100],
+                          ? Colors.orange[100]
+                          : Colors.red[100],
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -720,8 +725,8 @@ class _LoadingScreenState extends State<LoadingScreen> {
                         color: maxStock > 50
                             ? Colors.green[700]
                             : maxStock > 20
-                                ? Colors.orange[700]
-                                : Colors.red[700],
+                            ? Colors.orange[700]
+                            : Colors.red[700],
                       ),
                     ),
                   ),
