@@ -6,6 +6,7 @@ import 'package:distro_tracker_flutter/unloading/unloading.dart';
 import 'package:distro_tracker_flutter/expenses/expenses.dart';
 import 'package:distro_tracker_flutter/payments/payments.dart';
 import 'package:distro_tracker_flutter/reports/daily_reports.dart';
+import 'package:distro_tracker_flutter/invoices/invoice_list.dart';
 
 class Dashboard extends StatelessWidget {
   const Dashboard({super.key});
@@ -89,6 +90,27 @@ class Dashboard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // Inventory Management Section
+            _buildSectionTitle('Inventory Management'),
+            const SizedBox(height: 12),
+            _buildDashboardCard(
+              context,
+              title: 'Invoices',
+              subtitle: 'Manage stock invoices',
+              icon: Icons.receipt_long,
+              color: Colors.blue,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const InvoiceList(),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 24),
