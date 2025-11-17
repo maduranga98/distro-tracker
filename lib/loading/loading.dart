@@ -20,11 +20,13 @@ class _LoadingScreenState extends State<LoadingScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  // New fields for distribution/vehicle/date
+  // New fields for distribution/vehicle/date/weather
   String? _selectedDistributionId;
   String? _selectedVehicleId;
   DateTime _selectedDate = DateTime.now();
+  String _morningWeather = 'Sunny';
   List<Map<String, dynamic>> _vehicles = [];
+  final List<String> _weatherOptions = ['Sunny', 'Cloudy', 'Rainy', 'Stormy'];
 
   @override
   void initState() {
@@ -212,6 +214,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
         'distributionId': _selectedDistributionId,
         'vehicleId': _selectedVehicleId,
         'loadingDate': Timestamp.fromDate(_selectedDate),
+        'morningWeather': _morningWeather,
         'items': _selectedItems
             .map(
               (item) => {
@@ -586,6 +589,29 @@ class _LoadingScreenState extends State<LoadingScreen> {
                 borderRadius: BorderRadius.circular(8),
                 side: BorderSide(color: Colors.grey[300]!),
               ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Weather Dropdown
+            DropdownButtonFormField<String>(
+              value: _morningWeather,
+              decoration: const InputDecoration(
+                labelText: 'Morning Weather',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.wb_sunny),
+              ),
+              items: _weatherOptions.map((weather) {
+                return DropdownMenuItem(
+                  value: weather,
+                  child: Text(weather),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _morningWeather = value!;
+                });
+              },
             ),
           ],
         ),

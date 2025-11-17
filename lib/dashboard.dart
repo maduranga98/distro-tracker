@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:distro_tracker_flutter/setup/distributions.dart';
 import 'package:distro_tracker_flutter/setup/vehicles.dart';
 import 'package:distro_tracker_flutter/loading/loadingUi.dart';
-import 'package:distro_tracker_flutter/unloading/unloading.dart';
+import 'package:distro_tracker_flutter/unloading/enhanced_unloading.dart';
 import 'package:distro_tracker_flutter/expenses/expenses.dart';
 import 'package:distro_tracker_flutter/payments/payments.dart';
 import 'package:distro_tracker_flutter/reports/daily_reports.dart';
@@ -149,7 +149,7 @@ class Dashboard extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const UnloadingScreen(),
+                          builder: (context) => const EnhancedUnloadingScreen(),
                         ),
                       );
                     },
