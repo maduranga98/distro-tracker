@@ -22,8 +22,6 @@ class _AddStockState extends State<AddStock> {
   String? _selectedSupplier;
   String? _selectedItemId;
   Map<String, dynamic>? _selectedItemData;
-  DateTime? _selectedExpiryDate;
-  DateTime? _selectedManufactureDate;
   bool _isLoading = false;
   bool _isLoadingItems = false;
 
@@ -282,31 +280,6 @@ class _AddStockState extends State<AddStock> {
                 hint: "Enter batch number",
                 icon: Icons.numbers_outlined,
                 isRequired: true,
-              ),
-
-              const SizedBox(height: 32),
-
-              // Date Information Section
-              _buildSectionHeader("Date Information"),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildDateField(
-                      "Manufacture Date",
-                      _selectedManufactureDate,
-                      false,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildDateField(
-                      "Expiry Date",
-                      _selectedExpiryDate,
-                      true,
-                    ),
-                  ),
-                ],
               ),
 
               const SizedBox(height: 32),
@@ -589,89 +562,6 @@ class _AddStockState extends State<AddStock> {
     );
   }
 
-  Widget _buildDateField(
-    String label,
-    DateTime? selectedDate,
-    bool isRequired,
-  ) {
-    return GestureDetector(
-      onTap: () async {
-        final DateTime? picked = await showDatePicker(
-          context: context,
-          initialDate: selectedDate ?? DateTime.now(),
-          firstDate: DateTime(2020),
-          lastDate: DateTime(2030),
-          builder: (context, child) {
-            return Theme(
-              data: Theme.of(context).copyWith(
-                colorScheme: ColorScheme.light(
-                  primary: Colors.blue[600]!,
-                  onPrimary: Colors.white,
-                ),
-              ),
-              child: child!,
-            );
-          },
-        );
-        if (picked != null) {
-          setState(() {
-            if (label.contains('Expiry')) {
-              _selectedExpiryDate = picked;
-            } else {
-              _selectedManufactureDate = picked;
-            }
-          });
-        }
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[300]!),
-          borderRadius: BorderRadius.circular(12),
-          color: Colors.white,
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(
-              Icons.calendar_today_outlined,
-              color: Colors.grey[600],
-              size: 20,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label + (isRequired ? ' *' : ''),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[700],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    selectedDate != null
-                        ? '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'
-                        : 'Select date',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color:
-                          selectedDate != null
-                              ? Colors.grey[800]
-                              : Colors.grey[400],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -757,8 +647,6 @@ class _AddStockState extends State<AddStock> {
       _selectedSupplier = null;
       _selectedItemId = null;
       _selectedItemData = null;
-      _selectedExpiryDate = null;
-      _selectedManufactureDate = null;
       _filteredItems = [];
     });
 
@@ -775,11 +663,6 @@ class _AddStockState extends State<AddStock> {
 
   Future<void> _addStock() async {
     if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    if (_selectedExpiryDate == null) {
-      _showErrorSnackBar('Expiry date is required');
       return;
     }
 
@@ -805,8 +688,6 @@ class _AddStockState extends State<AddStock> {
         'quantity': int.tryParse(quantityController.text) ?? 0,
         'focUnits': int.tryParse(focUnitsController.text) ?? 0,
         'batchNumber': batchNumberController.text.trim(),
-        'manufactureDate': _selectedManufactureDate,
-        'expiryDate': _selectedExpiryDate,
         'notes': notesController.text.trim(),
         'distributorPrice': _selectedItemData!['distributorPrice'],
         'totalValue':
