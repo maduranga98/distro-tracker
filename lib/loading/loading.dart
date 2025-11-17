@@ -366,126 +366,283 @@ class _LoadingScreenState extends State<LoadingScreen> {
     );
   }
 
+  // Add current step for stepper
+  int _currentStep = 0;
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text(
-          'Loading Items',
-          style: TextStyle(fontWeight: FontWeight.w600),
+    return Column(
+      children: [
+        // Stepper Header
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              _buildStepIndicator(0, 'Setup', Icons.settings),
+              _buildStepConnector(),
+              _buildStepIndicator(1, 'Select Items', Icons.inventory_2),
+              _buildStepConnector(),
+              _buildStepIndicator(2, 'Review', Icons.check_circle),
+            ],
+          ),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0,
-        centerTitle: true,
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
-      ),
-      body: Column(
-        children: [
-          // Distribution/Vehicle/Date Selection
-          _buildSelectionCard(),
+        const Divider(height: 1),
 
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search by name, code, brand, batch...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: Colors.white,
+        // Content based on current step
+        Expanded(
+          child: IndexedStack(
+            index: _currentStep,
+            children: [
+              // Step 0: Distribution/Vehicle/Date Selection
+              _buildSetupStep(),
+
+              // Step 1: Items Selection
+              _buildItemsSelectionStep(),
+
+              // Step 2: Review & Save
+              _buildReviewStep(),
+            ],
+          ),
+        ),
+
+        // Navigation Buttons
+        Container(
+          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 4,
+                offset: const Offset(0, -2),
               ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
+            ],
+          ),
+          child: Row(
+            children: [
+              if (_currentStep > 0)
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _currentStep--;
+                      });
+                    },
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Back'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              if (_currentStep > 0) const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton.icon(
+                  onPressed: _currentStep == 2
+                      ? (_isSaving ? null : _saveLoading)
+                      : _canProceedToNextStep()
+                          ? () {
+                              setState(() {
+                                _currentStep++;
+                              });
+                            }
+                          : null,
+                  icon: Icon(_currentStep == 2 ? Icons.save : Icons.arrow_forward),
+                  label: Text(
+                    _currentStep == 2
+                        ? (_isSaving ? 'Saving...' : 'Save Loading')
+                        : 'Next',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue[600],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  bool _canProceedToNextStep() {
+    switch (_currentStep) {
+      case 0:
+        return _selectedDistributionId != null && _selectedVehicleId != null;
+      case 1:
+        return _selectedItems.isNotEmpty;
+      default:
+        return false;
+    }
+  }
+
+  Widget _buildStepIndicator(int step, String label, IconData icon) {
+    final isActive = step == _currentStep;
+    final isCompleted = step < _currentStep;
+
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: isCompleted
+                  ? Colors.green[600]
+                  : isActive
+                      ? Colors.blue[600]
+                      : Colors.grey[300],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isCompleted ? Icons.check : icon,
+              color: Colors.white,
+              size: 20,
             ),
           ),
-
-          // Summary Card
-          if (_selectedItems.isNotEmpty) _buildSummaryCard(),
-
-          // Items List
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredItems.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16.0),
-                    itemCount: _filteredItems.length,
-                    itemBuilder: (context, index) {
-                      final item = _filteredItems[index];
-                      return _buildItemCard(item);
-                    },
-                  ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+              color: isActive ? Colors.blue[600] : Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
-      bottomNavigationBar:
-          _selectedItems.isNotEmpty &&
-              _selectedDistributionId != null &&
-              _selectedVehicleId != null
-          ? Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 4,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
+    );
+  }
+
+  Widget _buildStepConnector() {
+    return Expanded(
+      child: Container(
+        height: 2,
+        margin: const EdgeInsets.only(bottom: 20),
+        color: Colors.grey[300],
+      ),
+    );
+  }
+
+  Widget _buildSetupStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: _buildSelectionCard(),
+    );
+  }
+
+  Widget _buildItemsSelectionStep() {
+    return Column(
+      children: [
+        // Search Bar
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search by name, code, brand, batch...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _searchQuery = '';
+                        });
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: ElevatedButton(
-                onPressed: _isSaving ? null : _saveLoading,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[600],
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _isSaving
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        'Save Loading (${_selectedItems.length} items)',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-              ),
-            )
-          : null,
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+              });
+            },
+          ),
+        ),
+
+        // Summary Card
+        if (_selectedItems.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: _buildCompactSummaryCard(),
+          ),
+
+        const SizedBox(height: 8),
+
+        // Items List
+        Expanded(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _filteredItems.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      itemCount: _filteredItems.length,
+                      itemBuilder: (context, index) {
+                        final item = _filteredItems[index];
+                        return _buildCompactItemCard(item);
+                      },
+                    ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReviewStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Summary Card
+          _buildSummaryCard(),
+          const SizedBox(height: 16),
+
+          // Selected Items List
+          const Text(
+            'Selected Items',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _selectedItems.length,
+            itemBuilder: (context, index) {
+              final item = _selectedItems[index];
+              return _buildReviewItemCard(item);
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -804,6 +961,157 @@ class _LoadingScreenState extends State<LoadingScreen> {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactItemCard(Map<String, dynamic> item) {
+    final itemId = item['id'] as String;
+    final currentQuantity = _getLoadingQuantity(itemId);
+    final maxStock = (item['quantity'] as int?) ?? 0;
+    final isSelected = currentQuantity > 0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: isSelected ? 3 : 1,
+      color: isSelected ? Colors.blue[50] : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: InkWell(
+        onTap: () => _showQuantityDialog(item),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            children: [
+              // Product Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item['productName']?.toString() ?? '',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${item['productCode']} • Stock: $maxStock',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Quantity Badge
+              if (isSelected)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[600],
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$currentQuantity',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                )
+              else
+                Icon(Icons.add_circle_outline, color: Colors.grey[400]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactSummaryCard() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.blue[100],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Text('Items: ${_selectedItems.length}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          Text('Qty: $_totalQuantity', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          Text('Rs. ${_totalValue.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewItemCard(Map<String, dynamic> item) {
+    final quantity = (item['loadingQuantity'] as int?) ?? 0;
+    final freeIssues = (item['freeIssues'] as int?) ?? 0;
+    final price = (item['distributorPrice'] as num?)?.toDouble() ?? 0.0;
+    final total = price * quantity;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item['productName']?.toString() ?? '',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item['productCode']?.toString() ?? '',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit, size: 18),
+                  onPressed: () {
+                    final fullItem = _items.firstWhere((i) => i['id'] == item['id']);
+                    _showQuantityDialog(fullItem);
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Qty: $quantity${freeIssues > 0 ? ' + $freeIssues FOC' : ''}', style: const TextStyle(fontSize: 12)),
+                Text('Rs. ${total.toStringAsFixed(2)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.green[700])),
+              ],
+            ),
+          ],
         ),
       ),
     );
