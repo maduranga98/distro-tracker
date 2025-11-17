@@ -17,7 +17,7 @@ class _AddItemsState extends State<AddItems> {
   final TextEditingController productCodeController = TextEditingController();
   final TextEditingController categoryController = TextEditingController();
   final TextEditingController brandController = TextEditingController();
-  final TextEditingController distributorPriceController =
+  final TextEditingController distributorMarginController =
       TextEditingController();
   final TextEditingController sellingPriceController =
       TextEditingController();
@@ -43,7 +43,7 @@ class _AddItemsState extends State<AddItems> {
     productCodeController.dispose();
     categoryController.dispose();
     brandController.dispose();
-    distributorPriceController.dispose();
+    distributorMarginController.dispose();
     sellingPriceController.dispose();
     mrpController.dispose();
     unitTypeController.dispose();
@@ -127,13 +127,13 @@ class _AddItemsState extends State<AddItems> {
                 children: [
                   Expanded(
                     child: _buildTextField(
-                      controller: distributorPriceController,
-                      label: "Distributor Price",
+                      controller: distributorMarginController,
+                      label: "Distributor Margin",
                       hint: "0.00",
-                      icon: Icons.attach_money_outlined,
+                      icon: Icons.percent_outlined,
                       keyboardType: TextInputType.number,
                       isRequired: true,
-                      prefix: "Rs. ",
+                      suffix: " %",
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -356,6 +356,7 @@ class _AddItemsState extends State<AddItems> {
     TextInputType keyboardType = TextInputType.text,
     bool isRequired = false,
     String? prefix,
+    String? suffix,
   }) {
     return TextFormField(
       controller: controller,
@@ -379,6 +380,11 @@ class _AddItemsState extends State<AddItems> {
         prefixIcon: Icon(icon, color: Colors.grey[600]),
         prefixText: prefix,
         prefixStyle: TextStyle(
+          color: Colors.grey[700],
+          fontWeight: FontWeight.w500,
+        ),
+        suffixText: suffix,
+        suffixStyle: TextStyle(
           color: Colors.grey[700],
           fontWeight: FontWeight.w500,
         ),
@@ -423,7 +429,7 @@ class _AddItemsState extends State<AddItems> {
     productCodeController.clear();
     categoryController.clear();
     brandController.clear();
-    distributorPriceController.clear();
+    distributorMarginController.clear();
     sellingPriceController.clear();
     mrpController.clear();
     unitTypeController.clear();
@@ -458,6 +464,11 @@ class _AddItemsState extends State<AddItems> {
       // Simulate API call - Replace with your actual Firebase/API logic
       await Future.delayed(const Duration(seconds: 2));
 
+      // Calculate distributor price from margin and selling price
+      final sellingPrice = double.tryParse(sellingPriceController.text) ?? 0.0;
+      final marginPercentage = double.tryParse(distributorMarginController.text) ?? 0.0;
+      final distributorPrice = sellingPrice * (1 - (marginPercentage / 100));
+
       // TODO: Implement your save logic here
       await FirebaseFirestore.instance.collection('items').add({
         'productName': productNameController.text.trim(),
@@ -465,9 +476,9 @@ class _AddItemsState extends State<AddItems> {
         'category': categoryController.text.trim(),
         'brand': brandController.text.trim(),
         'supplier': _selectedSupplier,
-        'distributorPrice':
-            double.tryParse(distributorPriceController.text) ?? 0.0,
-        'sellingPrice': double.tryParse(sellingPriceController.text) ?? 0.0,
+        'distributorMargin': marginPercentage,
+        'distributorPrice': distributorPrice,
+        'sellingPrice': sellingPrice,
         'mrp': double.tryParse(mrpController.text) ?? 0.0,
         'unitType': unitTypeController.text.trim(),
         'unitsPerCase': int.tryParse(unitsPerCaseController.text) ?? 0,

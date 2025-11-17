@@ -377,16 +377,20 @@ class _InvoiceListState extends State<InvoiceList> {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
 
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
                 final invoices = snapshot.data?.docs ?? [];
 
-                // Calculate totals
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _calculateTotals(invoices);
-                });
+                // Calculate totals only once when data changes
+                if (snapshot.hasData) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      _calculateTotals(invoices);
+                    }
+                  });
+                }
 
                 if (invoices.isEmpty) {
                   return Center(

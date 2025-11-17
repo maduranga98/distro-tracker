@@ -14,7 +14,7 @@ class Dashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text(
           'Distro Tracker',
@@ -26,28 +26,28 @@ class Dashboard extends StatelessWidget {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
               'Welcome to Distro Tracker',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 26,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey[800],
+                color: Colors.grey[900],
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
-              'Manage your dairy distribution business',
+              'Manage your dairy distribution business efficiently',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 15,
                 color: Colors.grey[600],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
 
             // Setup Section
             _buildSectionTitle('Setup & Configuration'),
@@ -229,12 +229,16 @@ class Dashboard extends StatelessWidget {
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: Colors.grey[700],
+    return Padding(
+      padding: const EdgeInsets.only(left: 4.0),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 19,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey[800],
+          letterSpacing: 0.3,
+        ),
       ),
     );
   }
@@ -251,15 +255,16 @@ class Dashboard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[200]!, width: 1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -267,32 +272,34 @@ class Dashboard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(11),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 icon,
                 color: color,
-                size: 32,
+                size: 28,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Text(
               title,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey[800],
+                color: Colors.grey[900],
+                letterSpacing: 0.2,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 5),
             Text(
               subtitle,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 color: Colors.grey[600],
+                height: 1.3,
               ),
             ),
           ],
