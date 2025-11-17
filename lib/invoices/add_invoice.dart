@@ -86,17 +86,18 @@ class _AddInvoiceState extends State<AddInvoice> {
 
       setState(() {
         _items = snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
           return {
             'id': doc.id,
-            'productCode': doc['productCode'] ?? '',
-            'productName': doc['productName'] ?? '',
-            'brand': doc['brand'] ?? '',
-            'category': doc['category'] ?? '',
-            'supplier': doc['supplier'] ?? '',
-            'unitType': doc['unitType'] ?? 'pcs',
-            'distributorPrice': (doc['distributorPrice'] ?? 0).toDouble(),
-            'sellingPrice': (doc['sellingPrice'] ?? 0).toDouble(),
-            'mrp': (doc['mrp'] ?? 0).toDouble(),
+            'productCode': data['productCode'] ?? '',
+            'productName': data['productName'] ?? '',
+            'brand': data['brand'] ?? '',
+            'category': data['category'] ?? '',
+            'supplier': data['supplier'] ?? '',
+            'unitType': data['unitType'] ?? 'pcs',
+            'distributorPrice': (data['distributorPrice'] ?? 0).toDouble(),
+            'sellingPrice': (data['sellingPrice'] ?? data['distributorPrice'] ?? 0).toDouble(),
+            'mrp': (data['mrp'] ?? 0).toDouble(),
           };
         }).toList();
         _filteredItems = List.from(_items);

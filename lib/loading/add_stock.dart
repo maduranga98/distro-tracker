@@ -17,6 +17,8 @@ class _AddStockState extends State<AddStock> {
   final TextEditingController focUnitsController = TextEditingController();
   final TextEditingController batchNumberController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
+  final TextEditingController purchasePriceController = TextEditingController();
+  final TextEditingController sellingPriceController = TextEditingController();
 
   // State variables
   String? _selectedSupplier;
@@ -281,6 +283,32 @@ class _AddStockState extends State<AddStock> {
                 icon: Icons.numbers_outlined,
                 isRequired: true,
               ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildTextField(
+                      controller: purchasePriceController,
+                      label: "Purchase Price *",
+                      hint: "Enter purchase price",
+                      icon: Icons.attach_money,
+                      keyboardType: TextInputType.number,
+                      isRequired: true,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildTextField(
+                      controller: sellingPriceController,
+                      label: "Selling Price *",
+                      hint: "Enter selling price",
+                      icon: Icons.price_tag,
+                      keyboardType: TextInputType.number,
+                      isRequired: true,
+                    ),
+                  ),
+                ],
+              ),
 
               const SizedBox(height: 32),
 
@@ -544,6 +572,14 @@ class _AddStockState extends State<AddStock> {
                   _selectedItemId = newValue;
                   _selectedItemData =
                       newValue != null ? _getItemById(newValue) : null;
+
+                  // Populate price fields with default values
+                  if (_selectedItemData != null) {
+                    purchasePriceController.text =
+                        (_selectedItemData!['distributorPrice'] ?? 0.0).toStringAsFixed(2);
+                    sellingPriceController.text =
+                        (_selectedItemData!['sellingPrice'] ?? 0.0).toStringAsFixed(2);
+                  }
                 });
               },
       isExpanded: true,
@@ -642,6 +678,8 @@ class _AddStockState extends State<AddStock> {
     focUnitsController.clear();
     batchNumberController.clear();
     notesController.clear();
+    purchasePriceController.clear();
+    sellingPriceController.clear();
 
     setState(() {
       _selectedSupplier = null;
@@ -676,6 +714,10 @@ class _AddStockState extends State<AddStock> {
     });
 
     try {
+      final purchasePrice = double.tryParse(purchasePriceController.text) ?? 0.0;
+      final sellingPrice = double.tryParse(sellingPriceController.text) ?? 0.0;
+      final quantity = int.tryParse(quantityController.text) ?? 0;
+
       // Prepare stock data
       final stockData = {
         'itemId': _selectedItemId,
@@ -685,14 +727,13 @@ class _AddStockState extends State<AddStock> {
         'category': _selectedItemData!['category'],
         'brand': _selectedItemData!['brand'],
         'unitType': _selectedItemData!['unitType'],
-        'quantity': int.tryParse(quantityController.text) ?? 0,
+        'quantity': quantity,
         'focUnits': int.tryParse(focUnitsController.text) ?? 0,
         'batchNumber': batchNumberController.text.trim(),
         'notes': notesController.text.trim(),
-        'distributorPrice': _selectedItemData!['distributorPrice'],
-        'totalValue':
-            (_selectedItemData!['distributorPrice'] ?? 0.0) *
-            (int.tryParse(quantityController.text) ?? 0),
+        'distributorPrice': purchasePrice,
+        'sellingPrice': sellingPrice,
+        'totalValue': purchasePrice * quantity,
         'status': 'active',
         'addedAt':
             DateTime.now(), // Will be replaced with FieldValue.serverTimestamp() in Firebase
@@ -702,6 +743,27 @@ class _AddStockState extends State<AddStock> {
         ...stockData,
         'addedAt': FieldValue.serverTimestamp(),
       });
+
+      // Track price changes if different from item master
+      final masterPurchasePrice = _selectedItemData!['distributorPrice'] ?? 0.0;
+      final masterSellingPrice = _selectedItemData!['sellingPrice'] ?? 0.0;
+
+      if (purchasePrice != masterPurchasePrice || sellingPrice != masterSellingPrice) {
+        await FirebaseFirestore.instance.collection('price_history').add({
+          'itemId': _selectedItemId,
+          'productCode': _selectedItemData!['productCode'],
+          'productName': _selectedItemData!['productName'],
+          'supplier': _selectedSupplier,
+          'batchNumber': batchNumberController.text.trim(),
+          'previousPurchasePrice': masterPurchasePrice,
+          'newPurchasePrice': purchasePrice,
+          'previousSellingPrice': masterSellingPrice,
+          'newSellingPrice': sellingPrice,
+          'quantity': quantity,
+          'changeReason': 'Stock addition with different price',
+          'changedAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       await _updateItemStockQuantity(
         _selectedItemId!,
