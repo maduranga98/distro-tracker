@@ -11,7 +11,8 @@ class AddInvoice extends StatefulWidget {
 
 class _AddInvoiceState extends State<AddInvoice> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _invoiceNumberController = TextEditingController();
+  final TextEditingController _invoiceNumberController =
+      TextEditingController();
   final TextEditingController _searchController = TextEditingController();
 
   DateTime _invoiceDate = DateTime.now();
@@ -46,10 +47,7 @@ class _AddInvoiceState extends State<AddInvoice> {
 
       setState(() {
         _distributions = snapshot.docs.map((doc) {
-          return {
-            'id': doc.id,
-            'name': doc['name'] ?? '',
-          };
+          return {'id': doc.id, 'name': doc['name'] ?? ''};
         }).toList();
       });
     } catch (e) {
@@ -115,8 +113,12 @@ class _AddInvoiceState extends State<AddInvoice> {
       } else {
         _filteredItems = _items.where((item) {
           final searchLower = query.toLowerCase();
-          return (item['productName'] as String).toLowerCase().contains(searchLower) ||
-              (item['productCode'] as String).toLowerCase().contains(searchLower) ||
+          return (item['productName'] as String).toLowerCase().contains(
+                searchLower,
+              ) ||
+              (item['productCode'] as String).toLowerCase().contains(
+                searchLower,
+              ) ||
               (item['brand'] as String).toLowerCase().contains(searchLower);
         }).toList();
       }
@@ -159,13 +161,19 @@ class _AddInvoiceState extends State<AddInvoice> {
       _invoiceItems[index][field] = value;
 
       // Calculate margin and totals when prices change
-      if (field == 'purchasePrice' || field == 'sellingPrice' || field == 'quantity') {
-        final purchasePrice = (_invoiceItems[index]['purchasePrice'] ?? 0).toDouble();
-        final sellingPrice = (_invoiceItems[index]['sellingPrice'] ?? 0).toDouble();
+      if (field == 'purchasePrice' ||
+          field == 'sellingPrice' ||
+          field == 'quantity') {
+        final purchasePrice = (_invoiceItems[index]['purchasePrice'] ?? 0)
+            .toDouble();
+        final sellingPrice = (_invoiceItems[index]['sellingPrice'] ?? 0)
+            .toDouble();
         final quantity = (_invoiceItems[index]['quantity'] ?? 0).toInt();
 
         final margin = sellingPrice - purchasePrice;
-        final marginPercentage = purchasePrice > 0 ? (margin / purchasePrice * 100) : 0.0;
+        final marginPercentage = purchasePrice > 0
+            ? (margin / purchasePrice * 100)
+            : 0.0;
         final lineTotal = purchasePrice * quantity;
         final lineProfit = margin * quantity;
 
@@ -188,8 +196,8 @@ class _AddInvoiceState extends State<AddInvoice> {
     for (var item in _invoiceItems) {
       totalValue += (item['lineTotal'] ?? 0).toDouble();
       totalProfit += (item['lineProfit'] ?? 0).toDouble();
-      totalQuantity += (item['quantity'] ?? 0).toInt();
-      totalFOC += (item['focQuantity'] ?? 0).toInt();
+      totalQuantity += ((item['quantity'] ?? 0) as num).toInt();
+      totalFOC += ((item['focQuantity'] ?? 0) as num).toInt();
     }
 
     setState(() {
@@ -238,21 +246,25 @@ class _AddInvoiceState extends State<AddInvoice> {
 
     try {
       // Save invoice to Firestore
-      final invoiceRef = await FirebaseFirestore.instance.collection('invoices').add({
-        'invoiceNumber': _invoiceNumberController.text,
-        'distributionId': _selectedDistribution,
-        'distributionName': _distributions.firstWhere((d) => d['id'] == _selectedDistribution)['name'],
-        'supplier': _selectedSupplier,
-        'invoiceDate': Timestamp.fromDate(_invoiceDate),
-        'items': _invoiceItems,
-        'totalQuantity': _totalQuantity,
-        'totalFOC': _totalFOC,
-        'totalValue': _totalValue,
-        'totalProfit': _totalProfit,
-        'status': 'received',
-        'createdAt': FieldValue.serverTimestamp(),
-        'lastUpdated': FieldValue.serverTimestamp(),
-      });
+      final invoiceRef = await FirebaseFirestore.instance
+          .collection('invoices')
+          .add({
+            'invoiceNumber': _invoiceNumberController.text,
+            'distributionId': _selectedDistribution,
+            'distributionName': _distributions.firstWhere(
+              (d) => d['id'] == _selectedDistribution,
+            )['name'],
+            'supplier': _selectedSupplier,
+            'invoiceDate': Timestamp.fromDate(_invoiceDate),
+            'items': _invoiceItems,
+            'totalQuantity': _totalQuantity,
+            'totalFOC': _totalFOC,
+            'totalValue': _totalValue,
+            'totalProfit': _totalProfit,
+            'status': 'received',
+            'createdAt': FieldValue.serverTimestamp(),
+            'lastUpdated': FieldValue.serverTimestamp(),
+          });
 
       // Update stock for each item in the invoice
       for (var item in _invoiceItems) {
@@ -287,7 +299,9 @@ class _AddInvoiceState extends State<AddInvoice> {
         'brand': item['brand'],
         'category': item['category'],
         'distributionId': _selectedDistribution,
-        'distributionName': _distributions.firstWhere((d) => d['id'] == _selectedDistribution)['name'],
+        'distributionName': _distributions.firstWhere(
+          (d) => d['id'] == _selectedDistribution,
+        )['name'],
         'supplier': _selectedSupplier,
         'quantity': item['quantity'],
         'focUnits': item['focQuantity'] ?? 0,
@@ -311,10 +325,7 @@ class _AddInvoiceState extends State<AddInvoice> {
   void _showError(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
       );
     }
   }
@@ -390,9 +401,9 @@ class _AddInvoiceState extends State<AddInvoice> {
                                       prefixIcon: Icon(Icons.business),
                                     ),
                                     items: _distributions.map((dist) {
-                                      return DropdownMenuItem(
-                                        value: dist['id'],
-                                        child: Text(dist['name']),
+                                      return DropdownMenuItem<String>(
+                                        value: dist['id'] as String?,
+                                        child: Text(dist['name'] as String),
                                       );
                                     }).toList(),
                                     onChanged: (value) {
@@ -416,9 +427,9 @@ class _AddInvoiceState extends State<AddInvoice> {
                                       prefixIcon: Icon(Icons.local_shipping),
                                     ),
                                     items: _suppliers.map((supplier) {
-                                      return DropdownMenuItem(
-                                        value: supplier['name'],
-                                        child: Text(supplier['name']),
+                                      return DropdownMenuItem<String>(
+                                        value: supplier['name'] as String?,
+                                        child: Text(supplier['name'] as String),
                                       );
                                     }).toList(),
                                     onChanged: (value) {
@@ -443,7 +454,9 @@ class _AddInvoiceState extends State<AddInvoice> {
                                         prefixIcon: Icon(Icons.calendar_today),
                                       ),
                                       child: Text(
-                                        DateFormat('yyyy-MM-dd').format(_invoiceDate),
+                                        DateFormat(
+                                          'yyyy-MM-dd',
+                                        ).format(_invoiceDate),
                                       ),
                                     ),
                                   ),
@@ -473,14 +486,18 @@ class _AddInvoiceState extends State<AddInvoice> {
                                       labelText: 'Search Items',
                                       border: OutlineInputBorder(),
                                       prefixIcon: Icon(Icons.search),
-                                      hintText: 'Search by name, code, or brand',
+                                      hintText:
+                                          'Search by name, code, or brand',
                                     ),
                                     onChanged: _filterItems,
                                   ),
                                   const SizedBox(height: 8),
-                                  if (_searchController.text.isNotEmpty && _filteredItems.isNotEmpty)
+                                  if (_searchController.text.isNotEmpty &&
+                                      _filteredItems.isNotEmpty)
                                     Container(
-                                      constraints: const BoxConstraints(maxHeight: 200),
+                                      constraints: const BoxConstraints(
+                                        maxHeight: 200,
+                                      ),
                                       decoration: BoxDecoration(
                                         border: Border.all(color: Colors.grey),
                                         borderRadius: BorderRadius.circular(4),
@@ -501,7 +518,8 @@ class _AddInvoiceState extends State<AddInvoice> {
                                                 fontWeight: FontWeight.bold,
                                               ),
                                             ),
-                                            onTap: () => _addItemToInvoice(item),
+                                            onTap: () =>
+                                                _addItemToInvoice(item),
                                           );
                                         },
                                       ),
@@ -580,7 +598,9 @@ class _AddInvoiceState extends State<AddInvoice> {
                                   'Total Profit: Rs. ${_totalProfit.toStringAsFixed(2)}',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: _totalProfit >= 0 ? Colors.green : Colors.red,
+                                    color: _totalProfit >= 0
+                                        ? Colors.green
+                                        : Colors.red,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -641,10 +661,7 @@ class _AddInvoiceState extends State<AddInvoice> {
                       ),
                       Text(
                         '${item['productCode']} - ${item['brand']}',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
                     ],
                   ),
@@ -668,7 +685,11 @@ class _AddInvoiceState extends State<AddInvoice> {
                     ),
                     keyboardType: TextInputType.number,
                     onChanged: (value) {
-                      _updateItemField(index, 'quantity', int.tryParse(value) ?? 0);
+                      _updateItemField(
+                        index,
+                        'quantity',
+                        int.tryParse(value) ?? 0,
+                      );
                     },
                   ),
                 ),
@@ -683,7 +704,11 @@ class _AddInvoiceState extends State<AddInvoice> {
                     ),
                     keyboardType: TextInputType.number,
                     onChanged: (value) {
-                      _updateItemField(index, 'focQuantity', int.tryParse(value) ?? 0);
+                      _updateItemField(
+                        index,
+                        'focQuantity',
+                        int.tryParse(value) ?? 0,
+                      );
                     },
                   ),
                 ),
@@ -703,7 +728,11 @@ class _AddInvoiceState extends State<AddInvoice> {
                     ),
                     keyboardType: TextInputType.number,
                     onChanged: (value) {
-                      _updateItemField(index, 'purchasePrice', double.tryParse(value) ?? 0.0);
+                      _updateItemField(
+                        index,
+                        'purchasePrice',
+                        double.tryParse(value) ?? 0.0,
+                      );
                     },
                   ),
                 ),
@@ -719,7 +748,11 @@ class _AddInvoiceState extends State<AddInvoice> {
                     ),
                     keyboardType: TextInputType.number,
                     onChanged: (value) {
-                      _updateItemField(index, 'sellingPrice', double.tryParse(value) ?? 0.0);
+                      _updateItemField(
+                        index,
+                        'sellingPrice',
+                        double.tryParse(value) ?? 0.0,
+                      );
                     },
                   ),
                 ),
@@ -739,7 +772,11 @@ class _AddInvoiceState extends State<AddInvoice> {
                     ),
                     keyboardType: TextInputType.number,
                     onChanged: (value) {
-                      _updateItemField(index, 'mrp', double.tryParse(value) ?? 0.0);
+                      _updateItemField(
+                        index,
+                        'mrp',
+                        double.tryParse(value) ?? 0.0,
+                      );
                     },
                   ),
                 ),
@@ -801,7 +838,9 @@ class _AddInvoiceState extends State<AddInvoice> {
                     'Profit: Rs. ${item['lineProfit'].toStringAsFixed(2)}',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: item['lineProfit'] >= 0 ? Colors.green : Colors.red,
+                      color: item['lineProfit'] >= 0
+                          ? Colors.green
+                          : Colors.red,
                     ),
                   ),
                 ],

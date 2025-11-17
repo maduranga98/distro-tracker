@@ -40,10 +40,7 @@ class _InvoiceListState extends State<InvoiceList> {
 
       setState(() {
         _distributions = snapshot.docs.map((doc) {
-          return {
-            'id': doc.id,
-            'name': doc['name'] ?? '',
-          };
+          return {'id': doc.id, 'name': doc['name'] ?? ''};
         }).toList();
       });
     } catch (e) {
@@ -87,14 +84,25 @@ class _InvoiceListState extends State<InvoiceList> {
     }
 
     if (_startDate != null) {
-      query = query.where('invoiceDate',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(_startDate!));
+      query = query.where(
+        'invoiceDate',
+        isGreaterThanOrEqualTo: Timestamp.fromDate(_startDate!),
+      );
     }
 
     if (_endDate != null) {
-      final endOfDay = DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
-      query = query.where('invoiceDate',
-          isLessThanOrEqualTo: Timestamp.fromDate(endOfDay));
+      final endOfDay = DateTime(
+        _endDate!.year,
+        _endDate!.month,
+        _endDate!.day,
+        23,
+        59,
+        59,
+      );
+      query = query.where(
+        'invoiceDate',
+        isLessThanOrEqualTo: Timestamp.fromDate(endOfDay),
+      );
     }
 
     return query;
@@ -149,7 +157,9 @@ class _InvoiceListState extends State<InvoiceList> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Invoice'),
-        content: const Text('Are you sure you want to delete this invoice? This action cannot be undone.'),
+        content: const Text(
+          'Are you sure you want to delete this invoice? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -364,9 +374,7 @@ class _InvoiceListState extends State<InvoiceList> {
               stream: _buildQuery().snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Center(
-                    child: Text('Error: ${snapshot.error}'),
-                  );
+                  return Center(child: Text('Error: ${snapshot.error}'));
                 }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -425,9 +433,8 @@ class _InvoiceListState extends State<InvoiceList> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => InvoiceDetails(
-                                invoiceId: invoiceId,
-                              ),
+                              builder: (context) =>
+                                  InvoiceDetails(invoiceId: invoiceId),
                             ),
                           );
                         },
@@ -437,7 +444,8 @@ class _InvoiceListState extends State<InvoiceList> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     invoice['invoiceNumber'] ?? 'N/A',
@@ -462,9 +470,18 @@ class _InvoiceListState extends State<InvoiceList> {
                                         value: 'delete',
                                         child: Row(
                                           children: [
-                                            Icon(Icons.delete, size: 20, color: Colors.red),
+                                            Icon(
+                                              Icons.delete,
+                                              size: 20,
+                                              color: Colors.red,
+                                            ),
                                             SizedBox(width: 8),
-                                            Text('Delete', style: TextStyle(color: Colors.red)),
+                                            Text(
+                                              'Delete',
+                                              style: TextStyle(
+                                                color: Colors.red,
+                                              ),
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -474,9 +491,10 @@ class _InvoiceListState extends State<InvoiceList> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => InvoiceDetails(
-                                              invoiceId: invoiceId,
-                                            ),
+                                            builder: (context) =>
+                                                InvoiceDetails(
+                                                  invoiceId: invoiceId,
+                                                ),
                                           ),
                                         );
                                       } else if (value == 'delete') {
@@ -489,14 +507,22 @@ class _InvoiceListState extends State<InvoiceList> {
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  Icon(Icons.business, size: 16, color: Colors.grey[600]),
+                                  Icon(
+                                    Icons.business,
+                                    size: 16,
+                                    color: Colors.grey[600],
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     invoice['distributionName'] ?? 'N/A',
                                     style: TextStyle(color: Colors.grey[600]),
                                   ),
                                   const SizedBox(width: 16),
-                                  Icon(Icons.local_shipping, size: 16, color: Colors.grey[600]),
+                                  Icon(
+                                    Icons.local_shipping,
+                                    size: 16,
+                                    color: Colors.grey[600],
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     invoice['supplier'] ?? 'N/A',
@@ -507,11 +533,16 @@ class _InvoiceListState extends State<InvoiceList> {
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: 16,
+                                    color: Colors.grey[600],
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     DateFormat('MMM dd, yyyy').format(
-                                      (invoice['invoiceDate'] as Timestamp).toDate(),
+                                      (invoice['invoiceDate'] as Timestamp)
+                                          .toDate(),
                                     ),
                                     style: TextStyle(color: Colors.grey[600]),
                                   ),
@@ -519,10 +550,12 @@ class _InvoiceListState extends State<InvoiceList> {
                               ),
                               const Divider(height: 24),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Items: ${(invoice['items'] as List).length}',
@@ -550,7 +583,8 @@ class _InvoiceListState extends State<InvoiceList> {
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
-                                          color: (invoice['totalProfit'] ?? 0) >= 0
+                                          color:
+                                              (invoice['totalProfit'] ?? 0) >= 0
                                               ? Colors.green
                                               : Colors.red,
                                         ),
@@ -575,9 +609,7 @@ class _InvoiceListState extends State<InvoiceList> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const AddInvoice(),
-            ),
+            MaterialPageRoute(builder: (context) => const AddInvoice()),
           );
         },
         icon: const Icon(Icons.add),
@@ -608,9 +640,9 @@ class _InvoiceListState extends State<InvoiceList> {
                     isExpanded: true,
                     hint: const Text('All Distributions'),
                     items: _distributions.map((dist) {
-                      return DropdownMenuItem(
-                        value: dist['id'],
-                        child: Text(dist['name']),
+                      return DropdownMenuItem<String>(
+                        value: dist['id'] as String?,
+                        child: Text(dist['name'] as String),
                       );
                     }).toList(),
                     onChanged: (value) {
@@ -629,9 +661,9 @@ class _InvoiceListState extends State<InvoiceList> {
                     isExpanded: true,
                     hint: const Text('All Suppliers'),
                     items: _suppliers.map((supplier) {
-                      return DropdownMenuItem(
-                        value: supplier['name'],
-                        child: Text(supplier['name']),
+                      return DropdownMenuItem<String>(
+                        value: supplier['name'] as String?,
+                        child: Text(supplier['name'] as String),
                       );
                     }).toList(),
                     onChanged: (value) {
