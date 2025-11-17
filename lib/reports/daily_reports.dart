@@ -305,9 +305,7 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
   }) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
           Container(
@@ -334,10 +332,7 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: child,
-          ),
+          Padding(padding: const EdgeInsets.all(16), child: child),
         ],
       ),
     );
@@ -377,12 +372,19 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
 
   Future<Map<String, dynamic>> _getSalesSummary() async {
     // Get date range for the selected day
-    final startOfDay = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final startOfDay = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+    );
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
     var query = _firestore
         .collection('unloading')
-        .where('unloadedAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where(
+          'unloadedAt',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+        )
         .where('unloadedAt', isLessThan: Timestamp.fromDate(endOfDay));
 
     if (selectedVehicleId != null) {
@@ -399,9 +401,9 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
     for (var doc in snapshot.docs) {
       final data = doc.data();
       totalSales += (data['totalValue'] ?? 0.0);
-      totalItemsSold += (data['totalQuantity'] ?? 0);
+      totalItemsSold += ((data['totalQuantity'] ?? 0) as num).toInt();
       totalDiscounts += (data['totalDiscounts'] ?? 0.0);
-      totalFreeIssues += (data['totalFreeIssues'] ?? 0);
+      totalFreeIssues += ((data['totalFreeIssues'] ?? 0) as num).toInt();
     }
 
     return {
@@ -413,7 +415,11 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
   }
 
   Future<Map<String, dynamic>> _getExpensesSummary() async {
-    final startOfDay = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final startOfDay = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+    );
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
     var query = _firestore
@@ -457,7 +463,11 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
   }
 
   Future<Map<String, dynamic>> _getPaymentsSummary() async {
-    final startOfDay = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final startOfDay = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+    );
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
     var query = _firestore

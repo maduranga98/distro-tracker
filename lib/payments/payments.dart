@@ -86,9 +86,11 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
               return FutureBuilder<DocumentSnapshot>(
                 future: _firestore.collection('vehicles').doc(vehicleId).get(),
                 builder: (context, vehicleSnapshot) {
-                  final vehicleName = vehicleSnapshot.hasData
-                      ? (vehicleSnapshot.data?.data()
-                          as Map<String, dynamic>?)?['vehicleName'] ?? 'Unknown'
+                  final vehicleName =
+                      vehicleSnapshot.hasData && vehicleSnapshot.data != null
+                      ? ((vehicleSnapshot.data!.data()
+                                as Map<String, dynamic>?)?['vehicleName'] ??
+                            'Unknown')
                       : 'Loading...';
 
                   return Card(
@@ -109,8 +111,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                           paymentType == 'cash'
                               ? Icons.money
                               : paymentType == 'cheque'
-                                  ? Icons.check_circle
-                                  : Icons.credit_card,
+                              ? Icons.check_circle
+                              : Icons.credit_card,
                           color: Colors.teal,
                         ),
                       ),
@@ -183,8 +185,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                               children: [
                                 Icon(Icons.delete, size: 20, color: Colors.red),
                                 SizedBox(width: 8),
-                                Text('Delete',
-                                    style: TextStyle(color: Colors.red)),
+                                Text(
+                                  'Delete',
+                                  style: TextStyle(color: Colors.red),
+                                ),
                               ],
                             ),
                           ),
@@ -288,22 +292,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                       prefixIcon: Icon(Icons.payment),
                     ),
                     items: const [
-                      DropdownMenuItem(
-                        value: 'cash',
-                        child: Text('Cash'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'credit',
-                        child: Text('Credit'),
-                      ),
+                      DropdownMenuItem(value: 'cash', child: Text('Cash')),
+                      DropdownMenuItem(value: 'credit', child: Text('Credit')),
                       DropdownMenuItem(
                         value: 'credit_received',
                         child: Text('Credit Received'),
                       ),
-                      DropdownMenuItem(
-                        value: 'cheque',
-                        child: Text('Cheque'),
-                      ),
+                      DropdownMenuItem(value: 'cheque', child: Text('Cheque')),
                     ],
                     onChanged: (value) {
                       setState(() {

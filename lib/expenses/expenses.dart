@@ -85,11 +85,12 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               return FutureBuilder<DocumentSnapshot>(
                 future: _firestore.collection('vehicles').doc(vehicleId).get(),
                 builder: (context, vehicleSnapshot) {
-                  final vehicleName = vehicleSnapshot.hasData
-                      ? (vehicleSnapshot.data?.data()
-                          as Map<String, dynamic>?)?['vehicleName'] ?? 'Unknown'
+                  final vehicleName =
+                      vehicleSnapshot.hasData && vehicleSnapshot.data != null
+                      ? ((vehicleSnapshot.data!.data()
+                                as Map<String, dynamic>?)?['vehicleName'] ??
+                            'Unknown')
                       : 'Loading...';
-
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     elevation: 2,
@@ -108,8 +109,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           expenseType == 'fuel'
                               ? Icons.local_gas_station
                               : expenseType == 'salary'
-                                  ? Icons.account_balance_wallet
-                                  : Icons.money_off,
+                              ? Icons.account_balance_wallet
+                              : Icons.money_off,
                           color: Colors.deepOrange,
                         ),
                       ),
@@ -171,8 +172,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                               children: [
                                 Icon(Icons.delete, size: 20, color: Colors.red),
                                 SizedBox(width: 8),
-                                Text('Delete',
-                                    style: TextStyle(color: Colors.red)),
+                                Text(
+                                  'Delete',
+                                  style: TextStyle(color: Colors.red),
+                                ),
                               ],
                             ),
                           ),
@@ -275,18 +278,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       prefixIcon: Icon(Icons.category),
                     ),
                     items: const [
-                      DropdownMenuItem(
-                        value: 'fuel',
-                        child: Text('Fuel'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'salary',
-                        child: Text('Salary'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'other',
-                        child: Text('Other'),
-                      ),
+                      DropdownMenuItem(value: 'fuel', child: Text('Fuel')),
+                      DropdownMenuItem(value: 'salary', child: Text('Salary')),
+                      DropdownMenuItem(value: 'other', child: Text('Other')),
                     ],
                     onChanged: (value) {
                       setState(() {

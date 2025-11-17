@@ -32,9 +32,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
+            return Center(child: Text('Error: ${snapshot.error}'));
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -65,10 +63,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Add your first vehicle to get started',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[500],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                   ),
                 ],
               ),
@@ -87,14 +82,17 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
               final status = data['status'] ?? 'active';
 
               return FutureBuilder<DocumentSnapshot>(
-                future:
-                    _firestore.collection('distributions').doc(distributionId).get(),
+                future: _firestore
+                    .collection('distributions')
+                    .doc(distributionId)
+                    .get(),
                 builder: (context, distSnapshot) {
                   final distributionName =
-                      distSnapshot.hasData
-                          ? (distSnapshot.data?.data()
-                              as Map<String, dynamic>?)?['name'] ?? 'Unknown'
-                          : 'Loading...';
+                      distSnapshot.hasData && distSnapshot.data != null
+                      ? ((distSnapshot.data!.data()
+                                as Map<String, dynamic>?)?['name'] ??
+                            'Unknown')
+                      : 'Loading...';
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
@@ -113,10 +111,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                           color: Colors.orange.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(
-                          Icons.local_shipping,
-                          color: Colors.orange,
-                        ),
+                        child: Icon(Icons.local_shipping, color: Colors.orange),
                       ),
                       title: Text(
                         vehicleName,
@@ -205,7 +200,10 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                               children: [
                                 Icon(Icons.delete, size: 20, color: Colors.red),
                                 SizedBox(width: 8),
-                                Text('Delete', style: TextStyle(color: Colors.red)),
+                                Text(
+                                  'Delete',
+                                  style: TextStyle(color: Colors.red),
+                                ),
                               ],
                             ),
                           ),
@@ -347,10 +345,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                       prefixIcon: Icon(Icons.info),
                     ),
                     items: const [
-                      DropdownMenuItem(
-                        value: 'active',
-                        child: Text('Active'),
-                      ),
+                      DropdownMenuItem(value: 'active', child: Text('Active')),
                       DropdownMenuItem(
                         value: 'inactive',
                         child: Text('Inactive'),
