@@ -10,6 +10,8 @@ class LoadingScreen extends StatefulWidget {
 }
 
 class _LoadingScreenState extends State<LoadingScreen> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   // State variables
   bool _isLoading = true;
   bool _isSaving = false;
@@ -17,6 +19,12 @@ class _LoadingScreenState extends State<LoadingScreen> {
   List<Map<String, dynamic>> _selectedItems = [];
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+
+  // New fields for distribution/vehicle/date
+  String? _selectedDistributionId;
+  String? _selectedVehicleId;
+  DateTime _selectedDate = DateTime.now();
+  List<Map<String, dynamic>> _vehicles = [];
 
   @override
   void initState() {
@@ -37,14 +45,13 @@ class _LoadingScreenState extends State<LoadingScreen> {
     });
 
     try {
-      final QuerySnapshot itemsSnapshot =
-          await FirebaseFirestore.instance
-              .collection('stock')
-              .where('status', isEqualTo: 'active')
-              .where('quantity', isGreaterThan: 0)
-              .orderBy('quantity')
-              .orderBy('productName')
-              .get();
+      final QuerySnapshot itemsSnapshot = await _firestore
+          .collection('stock')
+          .where('status', isEqualTo: 'active')
+          .where('quantity', isGreaterThan: 0)
+          .orderBy('quantity')
+          .orderBy('productName')
+          .get();
 
       List<Map<String, dynamic>> items = [];
       for (var doc in itemsSnapshot.docs) {
@@ -62,6 +69,26 @@ class _LoadingScreenState extends State<LoadingScreen> {
         _isLoading = false;
       });
       _showErrorSnackBar('Error loading items: ${e.toString()}');
+    }
+  }
+
+  /// Loads vehicles for selected distribution
+  Future<void> _loadVehicles(String distributionId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('vehicles')
+          .where('distributionId', isEqualTo: distributionId)
+          .where('status', isEqualTo: 'active')
+          .get();
+
+      setState(() {
+        _vehicles = snapshot.docs
+            .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
+            .toList();
+        _selectedVehicleId = null;
+      });
+    } catch (e) {
+      _showErrorSnackBar('Error loading vehicles: ${e.toString()}');
     }
   }
 
@@ -87,8 +114,8 @@ class _LoadingScreenState extends State<LoadingScreen> {
     }).toList();
   }
 
-  /// Updates quantity for an item
-  void _updateItemQuantity(String itemId, int quantity) {
+  /// Updates quantity and free issues for an item
+  void _updateItemQuantity(String itemId, int quantity, int freeIssues) {
     setState(() {
       final existingIndex = _selectedItems.indexWhere(
         (item) => item['id'] == itemId,
@@ -96,7 +123,11 @@ class _LoadingScreenState extends State<LoadingScreen> {
 
       if (quantity > 0) {
         final itemData = _items.firstWhere((item) => item['id'] == itemId);
-        final selectedItem = {...itemData, 'loadingQuantity': quantity};
+        final selectedItem = {
+          ...itemData,
+          'loadingQuantity': quantity,
+          'freeIssues': freeIssues,
+        };
 
         if (existingIndex >= 0) {
           _selectedItems[existingIndex] = selectedItem;
@@ -120,6 +151,15 @@ class _LoadingScreenState extends State<LoadingScreen> {
     return (selectedItem['loadingQuantity'] as int?) ?? 0;
   }
 
+  /// Gets the current free issues for an item
+  int _getFreeIssues(String itemId) {
+    final selectedItem = _selectedItems.firstWhere(
+      (item) => item['id'] == itemId,
+      orElse: () => <String, dynamic>{},
+    );
+    return (selectedItem['freeIssues'] as int?) ?? 0;
+  }
+
   /// Calculates total value of selected items
   double get _totalValue {
     return _selectedItems.fold(0.0, (sum, item) {
@@ -138,8 +178,26 @@ class _LoadingScreenState extends State<LoadingScreen> {
     );
   }
 
+  /// Calculates total free issues
+  int get _totalFreeIssues {
+    return _selectedItems.fold<int>(
+      0,
+      (sum, item) => sum + ((item['freeIssues'] as int?) ?? 0),
+    );
+  }
+
   /// Saves the loading data
   Future<void> _saveLoading() async {
+    if (_selectedDistributionId == null) {
+      _showErrorSnackBar('Please select a distribution');
+      return;
+    }
+
+    if (_selectedVehicleId == null) {
+      _showErrorSnackBar('Please select a vehicle');
+      return;
+    }
+
     if (_selectedItems.isEmpty) {
       _showErrorSnackBar('Please select at least one item');
       return;
@@ -151,39 +209,40 @@ class _LoadingScreenState extends State<LoadingScreen> {
 
     try {
       final loadingData = {
-        'items':
-            _selectedItems
-                .map(
-                  (item) => {
-                    'itemId':
-                        item['itemId'], // Using existing itemId from stock
-                    'stockDocId':
-                        item['id'], // Document ID from stock collection
-                    'productCode': item['productCode'],
-                    'productName': item['productName'],
-                    'batchNumber': item['batchNumber'],
-                    'brand': item['brand'],
-                    'category': item['category'],
-                    'unitType': item['unitType'],
-                    'loadingQuantity': item['loadingQuantity'],
-                    'distributorPrice': item['distributorPrice'],
-                    'totalValue':
-                        ((item['distributorPrice'] as num?)?.toDouble() ??
-                            0.0) *
+        'distributionId': _selectedDistributionId,
+        'vehicleId': _selectedVehicleId,
+        'loadingDate': Timestamp.fromDate(_selectedDate),
+        'items': _selectedItems
+            .map(
+              (item) => {
+                'itemId': item['itemId'],
+                'stockDocId': item['id'],
+                'productCode': item['productCode'],
+                'productName': item['productName'],
+                'batchNumber': item['batchNumber'],
+                'brand': item['brand'],
+                'category': item['category'],
+                'unitType': item['unitType'],
+                'loadingQuantity': item['loadingQuantity'],
+                'freeIssues': item['freeIssues'] ?? 0,
+                'distributorPrice': item['distributorPrice'],
+                'totalValue':
+                    ((item['distributorPrice'] as num?)?.toDouble() ?? 0.0) *
                         ((item['loadingQuantity'] as int?) ?? 0),
-                    'expiryDate': item['expiryDate'],
-                    'supplier': item['supplier'],
-                  },
-                )
-                .toList(),
+                'expiryDate': item['expiryDate'],
+                'supplier': item['supplier'],
+              },
+            )
+            .toList(),
         'totalItems': _selectedItems.length,
         'totalQuantity': _totalQuantity,
+        'totalFreeIssues': _totalFreeIssues,
         'totalValue': _totalValue,
         'loadedAt': FieldValue.serverTimestamp(),
         'status': 'loaded',
       };
 
-      await FirebaseFirestore.instance.collection('loading').add(loadingData);
+      await _firestore.collection('loading').add(loadingData);
 
       // Update stock quantities
       for (final item in _selectedItems) {
@@ -200,6 +259,10 @@ class _LoadingScreenState extends State<LoadingScreen> {
       // Clear selections
       setState(() {
         _selectedItems.clear();
+        _selectedDistributionId = null;
+        _selectedVehicleId = null;
+        _selectedDate = DateTime.now();
+        _vehicles.clear();
       });
 
       // Reload items to reflect updated stock
@@ -222,48 +285,80 @@ class _LoadingScreenState extends State<LoadingScreen> {
     int loadedQuantity,
   ) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('stock')
-          .doc(stockDocId)
-          .update({
-            'quantity': FieldValue.increment(-loadedQuantity),
-            'lastUpdated': FieldValue.serverTimestamp(),
-          });
+      await _firestore.collection('stock').doc(stockDocId).update({
+        'quantity': FieldValue.increment(-loadedQuantity),
+        'lastUpdated': FieldValue.serverTimestamp(),
+      });
     } catch (e) {
       debugPrint('Error updating stock: $e');
     }
   }
 
-  /// Formats expiry date for display
-  String _formatExpiryDate(dynamic expiryDate) {
-    if (expiryDate == null) return 'N/A';
+  /// Shows dialog to edit quantity and free issues
+  void _showQuantityDialog(Map<String, dynamic> item) {
+    final itemId = item['id'] as String;
+    final maxStock = (item['quantity'] as int?) ?? 0;
 
-    try {
-      if (expiryDate is Timestamp) {
-        final date = expiryDate.toDate();
-        return '${date.day}/${date.month}/${date.year}';
-      }
-      return 'N/A';
-    } catch (e) {
-      return 'N/A';
-    }
-  }
+    int currentQuantity = _getLoadingQuantity(itemId);
+    int currentFreeIssues = _getFreeIssues(itemId);
 
-  /// Checks if item is expiring soon (within 30 days)
-  bool _isExpiringSoon(dynamic expiryDate) {
-    if (expiryDate == null) return false;
+    final quantityController =
+        TextEditingController(text: currentQuantity.toString());
+    final freeIssuesController =
+        TextEditingController(text: currentFreeIssues.toString());
 
-    try {
-      if (expiryDate is Timestamp) {
-        final date = expiryDate.toDate();
-        final now = DateTime.now();
-        final difference = date.difference(now).inDays;
-        return difference <= 30 && difference >= 0;
-      }
-      return false;
-    } catch (e) {
-      return false;
-    }
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(item['productName']?.toString() ?? ''),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: quantityController,
+              decoration: InputDecoration(
+                labelText: 'Loading Quantity',
+                hintText: 'Max: $maxStock',
+                border: const OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: freeIssuesController,
+              decoration: const InputDecoration(
+                labelText: 'Free Issues',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final quantity = int.tryParse(quantityController.text) ?? 0;
+              final freeIssues = int.tryParse(freeIssuesController.text) ?? 0;
+
+              if (quantity > maxStock) {
+                _showErrorSnackBar('Quantity exceeds available stock');
+                return;
+              }
+
+              _updateItemQuantity(itemId, quantity, freeIssues);
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -280,45 +375,36 @@ class _LoadingScreenState extends State<LoadingScreen> {
         elevation: 0,
         centerTitle: true,
         systemOverlayStyle: SystemUiOverlayStyle.dark,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(80),
-          child: Padding(
+      ),
+      body: Column(
+        children: [
+          // Distribution/Vehicle/Date Selection
+          _buildSelectionCard(),
+
+          // Search Bar
+          Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search by name, code, brand, batch...',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon:
-                    _searchQuery.isNotEmpty
-                        ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              _searchQuery = '';
-                            });
-                          },
-                        )
-                        : null,
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.blue[600]!, width: 2),
                 ),
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
               ),
               onChanged: (value) {
                 setState(() {
@@ -327,103 +413,227 @@ class _LoadingScreenState extends State<LoadingScreen> {
               },
             ),
           ),
-        ),
-      ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Column(
-                children: [
-                  // Summary Card
-                  if (_selectedItems.isNotEmpty) _buildSummaryCard(),
 
-                  // Items List
-                  Expanded(
-                    child:
-                        _filteredItems.isEmpty
-                            ? _buildEmptyState()
-                            : ListView.builder(
-                              padding: const EdgeInsets.all(16.0),
-                              itemCount: _filteredItems.length,
-                              itemBuilder: (context, index) {
-                                final item = _filteredItems[index];
-                                return _buildItemCard(item);
-                              },
-                            ),
+          // Summary Card
+          if (_selectedItems.isNotEmpty) _buildSummaryCard(),
+
+          // Items List
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _filteredItems.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16.0),
+                        itemCount: _filteredItems.length,
+                        itemBuilder: (context, index) {
+                          final item = _filteredItems[index];
+                          return _buildItemCard(item);
+                        },
+                      ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: _selectedItems.isNotEmpty &&
+              _selectedDistributionId != null &&
+              _selectedVehicleId != null
+          ? Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 4,
+                    offset: const Offset(0, -2),
                   ),
                 ],
               ),
-      bottomNavigationBar:
-          _selectedItems.isNotEmpty
-              ? Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 4,
-                      offset: const Offset(0, -2),
-                    ),
-                  ],
-                ),
-                child: ElevatedButton(
-                  onPressed: _isSaving ? null : _saveLoading,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[600],
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              child: ElevatedButton(
+                onPressed: _isSaving ? null : _saveLoading,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue[600],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child:
-                      _isSaving
-                          ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                          : Text(
-                            'Save Loading (${_selectedItems.length} items)',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
                 ),
-              )
-              : null,
+                child: _isSaving
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        'Save Loading (${_selectedItems.length} items)',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+              ),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildSelectionCard() {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Distribution Dropdown
+            StreamBuilder<QuerySnapshot>(
+              stream: _firestore
+                  .collection('distributions')
+                  .where('status', isEqualTo: 'active')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const CircularProgressIndicator();
+                }
+
+                final distributions = snapshot.data!.docs;
+
+                return DropdownButtonFormField<String>(
+                  value: _selectedDistributionId,
+                  decoration: const InputDecoration(
+                    labelText: 'Select Distribution *',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.business),
+                  ),
+                  items: distributions.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return DropdownMenuItem(
+                      value: doc.id,
+                      child: Text(data['name'] ?? 'Unknown'),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedDistributionId = value;
+                      if (value != null) {
+                        _loadVehicles(value);
+                      }
+                    });
+                  },
+                );
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // Vehicle Dropdown
+            DropdownButtonFormField<String>(
+              value: _selectedVehicleId,
+              decoration: const InputDecoration(
+                labelText: 'Select Vehicle *',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.local_shipping),
+              ),
+              items: _vehicles.map((vehicle) {
+                return DropdownMenuItem(
+                  value: vehicle['id'],
+                  child: Text(vehicle['vehicleName'] ?? 'Unknown'),
+                );
+              }).toList(),
+              onChanged: _selectedDistributionId == null
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _selectedVehicleId = value;
+                      });
+                    },
+            ),
+
+            const SizedBox(height: 16),
+
+            // Date Picker
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.calendar_today),
+              title: const Text('Loading Date'),
+              subtitle: Text(_formatDate(_selectedDate)),
+              trailing: const Icon(Icons.arrow_drop_down),
+              onTap: () async {
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: _selectedDate,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now().add(const Duration(days: 7)),
+                );
+                if (date != null) {
+                  setState(() {
+                    _selectedDate = date;
+                  });
+                }
+              },
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: Colors.grey[300]!),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildSummaryCard() {
     return Container(
-      margin: const EdgeInsets.all(16.0),
+      margin: const EdgeInsets.symmetric(horizontal: 16.0),
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: Colors.blue[50],
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.blue[200]!),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Column(
         children: [
-          _buildSummaryItem(
-            'Items',
-            '${_selectedItems.length}',
-            Icons.inventory_2,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildSummaryItem(
+                'Items',
+                '${_selectedItems.length}',
+                Icons.inventory_2,
+              ),
+              _buildSummaryItem('Quantity', '$_totalQuantity', Icons.numbers),
+              _buildSummaryItem(
+                'Free',
+                '$_totalFreeIssues',
+                Icons.card_giftcard,
+              ),
+            ],
           ),
-          _buildSummaryItem('Quantity', '$_totalQuantity', Icons.numbers),
-          _buildSummaryItem(
-            'Value',
-            'Rs.${_totalValue.toStringAsFixed(2)}',
-            Icons.attach_money,
+          const Divider(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Total Value: ',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              Text(
+                'Rs. ${_totalValue.toStringAsFixed(2)}',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue[800],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -449,329 +659,122 @@ class _LoadingScreenState extends State<LoadingScreen> {
   }
 
   Widget _buildItemCard(Map<String, dynamic> item) {
-    final currentQuantity = _getLoadingQuantity(item['id'] as String);
+    final itemId = item['id'] as String;
+    final currentQuantity = _getLoadingQuantity(itemId);
+    final currentFreeIssues = _getFreeIssues(itemId);
     final maxStock = (item['quantity'] as int?) ?? 0;
-    final isExpiringSoon = _isExpiringSoon(item['expiryDate']);
 
-    return Container(
+    return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () => _showQuantityDialog(item),
         borderRadius: BorderRadius.circular(12),
-        border:
-            isExpiringSoon
-                ? Border.all(color: Colors.orange[300]!, width: 1.5)
-                : null,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with expiry warning
-            if (isExpiringSoon) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.orange[100],
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.warning, size: 16, color: Colors.orange[700]),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Expiring Soon',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.orange[700],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-
-            // Product Info
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item['productCode']?.toString() ?? '',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.blue[600],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item['productName']?.toString() ?? '',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color:
-                        maxStock > 50
-                            ? Colors.green[100]
-                            : maxStock > 20
-                            ? Colors.orange[100]
-                            : Colors.red[100],
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'Stock: $maxStock',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color:
-                          maxStock > 50
-                              ? Colors.green[700]
-                              : maxStock > 20
-                              ? Colors.orange[700]
-                              : Colors.red[700],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // Details Grid
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildDetailItem(
-                          'Brand',
-                          item['brand']?.toString() ?? 'N/A',
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item['productCode']?.toString() ?? '',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue[600],
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: _buildDetailItem(
-                          'Category',
-                          item['category']?.toString() ?? 'N/A',
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildDetailItem(
-                          'Batch',
-                          item['batchNumber']?.toString() ?? 'N/A',
-                        ),
-                      ),
-                      Expanded(
-                        child: _buildDetailItem(
-                          'Unit',
-                          item['unitType']?.toString() ?? 'N/A',
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildDetailItem(
-                          'Expiry',
-                          _formatExpiryDate(item['expiryDate']),
-                        ),
-                      ),
-                      Expanded(
-                        child: _buildDetailItem(
-                          'Supplier',
-                          item['supplier']?.toString() ?? 'N/A',
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Price
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Price per unit:',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                ),
-                Text(
-                  'Rs.${((item['distributorPrice'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // Quantity Controls
-            Row(
-              children: [
-                const Text(
-                  'Loading Quantity:',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                ),
-                const Spacer(),
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        onPressed:
-                            currentQuantity > 0
-                                ? () => _updateItemQuantity(
-                                  item['id'] as String,
-                                  currentQuantity - 1,
-                                )
-                                : null,
-                        icon: const Icon(Icons.remove),
-                        iconSize: 18,
-                        padding: const EdgeInsets.all(8),
-                        constraints: const BoxConstraints(
-                          minWidth: 36,
-                          minHeight: 36,
-                        ),
-                      ),
-                      Container(
-                        width: 60,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Text(
-                          '$currentQuantity',
-                          textAlign: TextAlign.center,
+                        const SizedBox(height: 4),
+                        Text(
+                          item['productName']?.toString() ?? '',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: maxStock > 50
+                          ? Colors.green[100]
+                          : maxStock > 20
+                              ? Colors.orange[100]
+                              : Colors.red[100],
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Stock: $maxStock',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: maxStock > 50
+                            ? Colors.green[700]
+                            : maxStock > 20
+                                ? Colors.orange[700]
+                                : Colors.red[700],
                       ),
-                      IconButton(
-                        onPressed:
-                            currentQuantity < maxStock
-                                ? () => _updateItemQuantity(
-                                  item['id'] as String,
-                                  currentQuantity + 1,
-                                )
-                                : null,
-                        icon: const Icon(Icons.add),
-                        iconSize: 18,
-                        padding: const EdgeInsets.all(8),
-                        constraints: const BoxConstraints(
-                          minWidth: 36,
-                          minHeight: 36,
-                        ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Rs. ${((item['distributorPrice'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2)} per unit',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.green,
+                ),
+              ),
+              if (currentQuantity > 0) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Loading Qty:'),
+                          Text(
+                            '$currentQuantity',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Free Issues:'),
+                          Text(
+                            '$currentFreeIssues',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
               ],
-            ),
-
-            // Total for this item
-            if (currentQuantity > 0) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.blue[200]!),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Total Value:',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      'Rs.${(((item['distributorPrice'] as num?)?.toDouble() ?? 0.0) * currentQuantity).toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue[700],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailItem(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
+      ),
     );
   }
 
@@ -802,7 +805,10 @@ class _LoadingScreenState extends State<LoadingScreen> {
     );
   }
 
-  /// Shows success snackbar
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -821,9 +827,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
     );
   }
 
-  /// Shows error snackbar
   void _showErrorSnackBar(String message) {
-    print(message);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(

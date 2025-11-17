@@ -19,7 +19,7 @@ class _AddItemsState extends State<AddItems> {
   final TextEditingController brandController = TextEditingController();
   final TextEditingController distributorPriceController =
       TextEditingController();
-  final TextEditingController wholeSalePriceController =
+  final TextEditingController sellingPriceController =
       TextEditingController();
   final TextEditingController mrpController = TextEditingController();
   final TextEditingController unitTypeController = TextEditingController();
@@ -44,7 +44,7 @@ class _AddItemsState extends State<AddItems> {
     categoryController.dispose();
     brandController.dispose();
     distributorPriceController.dispose();
-    wholeSalePriceController.dispose();
+    sellingPriceController.dispose();
     mrpController.dispose();
     unitTypeController.dispose();
     unitsPerCaseController.dispose();
@@ -139,8 +139,8 @@ class _AddItemsState extends State<AddItems> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: _buildTextField(
-                      controller: wholeSalePriceController,
-                      label: "Wholesale Price",
+                      controller: sellingPriceController,
+                      label: "Selling Price",
                       hint: "0.00",
                       icon: Icons.store_outlined,
                       keyboardType: TextInputType.number,
@@ -424,7 +424,7 @@ class _AddItemsState extends State<AddItems> {
     categoryController.clear();
     brandController.clear();
     distributorPriceController.clear();
-    wholeSalePriceController.clear();
+    sellingPriceController.clear();
     mrpController.clear();
     unitTypeController.clear();
     unitsPerCaseController.clear();
@@ -467,7 +467,7 @@ class _AddItemsState extends State<AddItems> {
         'supplier': _selectedSupplier,
         'distributorPrice':
             double.tryParse(distributorPriceController.text) ?? 0.0,
-        'wholesalePrice': double.tryParse(wholeSalePriceController.text) ?? 0.0,
+        'sellingPrice': double.tryParse(sellingPriceController.text) ?? 0.0,
         'mrp': double.tryParse(mrpController.text) ?? 0.0,
         'unitType': unitTypeController.text.trim(),
         'unitsPerCase': int.tryParse(unitsPerCaseController.text) ?? 0,
