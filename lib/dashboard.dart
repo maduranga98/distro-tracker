@@ -55,23 +55,23 @@ class Dashboard extends StatelessWidget {
             ),
             const SizedBox(height: 28),
 
-            // Setup Section
-            _buildSectionTitle('Setup & Configuration'),
+            // Daily Operations Section
+            _buildSectionTitle('Daily Operations'),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: _buildDashboardCard(
                     context,
-                    title: 'Distributions',
-                    subtitle: 'Manage distributions',
-                    icon: Icons.business,
-                    color: Colors.purple,
+                    title: 'Loading',
+                    subtitle: 'Load items to vehicles',
+                    icon: Icons.upload,
+                    color: Colors.green,
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const DistributionsScreen(),
+                          builder: (context) => const Loadingui(),
                         ),
                       );
                     },
@@ -81,15 +81,15 @@ class Dashboard extends StatelessWidget {
                 Expanded(
                   child: _buildDashboardCard(
                     context,
-                    title: 'Vehicles',
-                    subtitle: 'Manage vehicles',
-                    icon: Icons.local_shipping,
-                    color: Colors.orange,
+                    title: 'Unloading',
+                    subtitle: 'Record sales & returns',
+                    icon: Icons.download,
+                    color: Colors.red,
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const VehiclesScreen(),
+                          builder: (context) => const EnhancedUnloadingScreen(),
                         ),
                       );
                     },
@@ -100,20 +100,44 @@ class Dashboard extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            _buildDashboardCard(
-              context,
-              title: 'Routes',
-              subtitle: 'Add & manage delivery routes',
-              icon: Icons.route,
-              color: Colors.blueGrey,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const RoutesCreation(),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDashboardCard(
+                    context,
+                    title: 'Expenses',
+                    subtitle: 'Fuel, salary & more',
+                    icon: Icons.money_off,
+                    color: Colors.deepOrange,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ExpensesScreen(),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDashboardCard(
+                    context,
+                    title: 'Payments',
+                    subtitle: 'Cash, credits & cheques',
+                    icon: Icons.payment,
+                    color: Colors.teal,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PaymentsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 24),
@@ -247,93 +271,6 @@ class Dashboard extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Daily Operations Section
-            _buildSectionTitle('Daily Operations'),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildDashboardCard(
-                    context,
-                    title: 'Loading',
-                    subtitle: 'Load items to vehicles',
-                    icon: Icons.upload,
-                    color: Colors.green,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const Loadingui(),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildDashboardCard(
-                    context,
-                    title: 'Unloading',
-                    subtitle: 'Record sales & returns',
-                    icon: Icons.download,
-                    color: Colors.red,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const EnhancedUnloadingScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Expanded(
-                  child: _buildDashboardCard(
-                    context,
-                    title: 'Expenses',
-                    subtitle: 'Fuel, salary & more',
-                    icon: Icons.money_off,
-                    color: Colors.deepOrange,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ExpensesScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildDashboardCard(
-                    context,
-                    title: 'Payments',
-                    subtitle: 'Cash, credits & cheques',
-                    icon: Icons.payment,
-                    color: Colors.teal,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const PaymentsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
             // Reports Section
             _buildSectionTitle('Reports & Analytics'),
             const SizedBox(height: 12),
@@ -348,6 +285,69 @@ class Dashboard extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const DailyReportsScreen(),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 24),
+
+            // Setup Section
+            _buildSectionTitle('Setup & Configuration'),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDashboardCard(
+                    context,
+                    title: 'Distributions',
+                    subtitle: 'Manage distributions',
+                    icon: Icons.business,
+                    color: Colors.purple,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const DistributionsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDashboardCard(
+                    context,
+                    title: 'Vehicles',
+                    subtitle: 'Manage vehicles',
+                    icon: Icons.local_shipping,
+                    color: Colors.orange,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const VehiclesScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            _buildDashboardCard(
+              context,
+              title: 'Routes',
+              subtitle: 'Add & manage delivery routes',
+              icon: Icons.route,
+              color: Colors.blueGrey,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RoutesCreation(),
                   ),
                 );
               },
