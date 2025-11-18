@@ -61,6 +61,24 @@ class _LoadingScreenState extends State<LoadingScreen> {
       for (var doc in itemsSnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
+
+        // Load unitsPerCase from items collection if not present
+        if (data['unitsPerCase'] == null || data['unitsPerCase'] == 0) {
+          try {
+            final itemDoc = await _firestore
+                .collection('items')
+                .doc(data['itemId'])
+                .get();
+            if (itemDoc.exists) {
+              data['unitsPerCase'] = (itemDoc.data()?['unitsPerCase'] ?? 1);
+            } else {
+              data['unitsPerCase'] = 1;
+            }
+          } catch (e) {
+            data['unitsPerCase'] = 1;
+          }
+        }
+
         items.add(data);
       }
 
@@ -350,67 +368,226 @@ class _LoadingScreenState extends State<LoadingScreen> {
   void _showQuantityDialog(Map<String, dynamic> item) {
     final itemId = item['id'] as String;
     final maxStock = (item['quantity'] as int?) ?? 0;
+    final unitsPerCase = (item['unitsPerCase'] as int?) ?? 1;
 
     int currentQuantity = _getLoadingQuantity(itemId);
     int currentFreeIssues = _getFreeIssues(itemId);
 
-    final quantityController = TextEditingController(
-      text: currentQuantity.toString(),
-    );
-    final freeIssuesController = TextEditingController(
-      text: currentFreeIssues.toString(),
-    );
+    // Calculate current cases and pieces
+    int currentCases = currentQuantity ~/ unitsPerCase;
+    int currentPieces = currentQuantity % unitsPerCase;
+    int currentFocCases = currentFreeIssues ~/ unitsPerCase;
+    int currentFocPieces = currentFreeIssues % unitsPerCase;
+
+    final casesController = TextEditingController(text: currentCases.toString());
+    final piecesController = TextEditingController(text: currentPieces.toString());
+    final focCasesController = TextEditingController(text: currentFocCases.toString());
+    final focPiecesController = TextEditingController(text: currentFocPieces.toString());
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(item['productName']?.toString() ?? ''),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: quantityController,
-              decoration: InputDecoration(
-                labelText: 'Loading Quantity',
-                hintText: 'Max: $maxStock',
-                border: const OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: freeIssuesController,
-              decoration: const InputDecoration(
-                labelText: 'Free Issues',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final quantity = int.tryParse(quantityController.text) ?? 0;
-              final freeIssues = int.tryParse(freeIssuesController.text) ?? 0;
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          final cases = int.tryParse(casesController.text) ?? 0;
+          final pieces = int.tryParse(piecesController.text) ?? 0;
+          final focCases = int.tryParse(focCasesController.text) ?? 0;
+          final focPieces = int.tryParse(focPiecesController.text) ?? 0;
+          final totalQty = (cases * unitsPerCase) + pieces;
+          final totalFoc = (focCases * unitsPerCase) + focPieces;
 
-              if (quantity > maxStock) {
-                _showErrorSnackBar('Quantity exceeds available stock');
-                return;
-              }
+          return AlertDialog(
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  item['productName']?.toString() ?? '',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                Text(
+                  '$unitsPerCase pcs per case | Max: $maxStock pcs',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Loading Quantity Section
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Loading Quantity',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue[900],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: casesController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Cases',
+                                  border: OutlineInputBorder(),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                ),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                onChanged: (_) => setState(() {}),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextFormField(
+                                controller: piecesController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Pieces',
+                                  border: OutlineInputBorder(),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                ),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                onChanged: (_) => setState(() {}),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[100],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Total:', style: TextStyle(fontWeight: FontWeight.w600)),
+                              Text(
+                                '$totalQty pcs',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue[900],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Free Issues Section
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Free Issues',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange[900],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: focCasesController,
+                                decoration: const InputDecoration(
+                                  labelText: 'FOC Cases',
+                                  border: OutlineInputBorder(),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                ),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                onChanged: (_) => setState(() {}),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextFormField(
+                                controller: focPiecesController,
+                                decoration: const InputDecoration(
+                                  labelText: 'FOC Pieces',
+                                  border: OutlineInputBorder(),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                ),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                onChanged: (_) => setState(() {}),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.orange[100],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Total:', style: TextStyle(fontWeight: FontWeight.w600)),
+                              Text(
+                                '$totalFoc pcs',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange[900],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (totalQty > maxStock) {
+                    _showErrorSnackBar('Quantity exceeds available stock');
+                    return;
+                  }
 
-              _updateItemQuantity(itemId, quantity, freeIssues);
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
+                  _updateItemQuantity(itemId, totalQty, totalFoc);
+                  Navigator.pop(context);
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -827,22 +1004,22 @@ class _LoadingScreenState extends State<LoadingScreen> {
               items: _routes.map((route) {
                 return DropdownMenuItem<String>(
                   value: route['id'] as String?,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '${route['routeCode']} - ${route['routeName']}',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      Text(
-                        '${route['startLocation']} → ${route['endLocation']}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
+                  child: Text(
+                    '${route['routeCode']} - ${route['routeName']}',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 );
               }).toList(),
+              selectedItemBuilder: (BuildContext context) {
+                return _routes.map((route) {
+                  return Text(
+                    '${route['routeCode']} - ${route['routeName']}',
+                    style: const TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
+                  );
+                }).toList();
+              },
               onChanged: _selectedDistributionId == null
                   ? null
                   : (value) {
@@ -851,6 +1028,36 @@ class _LoadingScreenState extends State<LoadingScreen> {
                       });
                     },
             ),
+
+            // Show route details below dropdown if route is selected
+            if (_selectedRouteId != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue[700], size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${_routes.firstWhere((r) => r['id'] == _selectedRouteId)['startLocation']} → ${_routes.firstWhere((r) => r['id'] == _selectedRouteId)['endLocation']}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue[900],
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
             if (_routes.isEmpty && _selectedDistributionId != null) ...[
               const SizedBox(height: 16),
