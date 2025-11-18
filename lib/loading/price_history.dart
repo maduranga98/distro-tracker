@@ -34,9 +34,14 @@ class _PriceHistoryState extends State<PriceHistory> {
 
   Future<void> _loadItems() async {
     try {
-      final snapshot = await _firestore.collection('items').orderBy('productName').get();
+      final snapshot = await _firestore
+          .collection('items')
+          .orderBy('productName')
+          .get();
       setState(() {
-        _items = snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+        _items = snapshot.docs
+            .map((doc) => {'id': doc.id, ...doc.data()})
+            .toList();
       });
     } catch (e) {
       _showErrorSnackBar('Error loading items: $e');
@@ -57,10 +62,7 @@ class _PriceHistoryState extends State<PriceHistory> {
 
       final history = snapshot.docs.map((doc) {
         final data = doc.data();
-        return {
-          'id': doc.id,
-          ...data,
-        };
+        return {'id': doc.id, ...data};
       }).toList();
 
       setState(() {
@@ -79,13 +81,15 @@ class _PriceHistoryState extends State<PriceHistory> {
   void _filterHistory() {
     setState(() {
       _filteredHistory = _priceHistory.where((item) {
-        final matchesItem = _selectedItemId == null || item['itemId'] == _selectedItemId;
+        final matchesItem =
+            _selectedItemId == null || item['itemId'] == _selectedItemId;
         final productName = item['productName']?.toString().toLowerCase() ?? '';
         final productCode = item['productCode']?.toString().toLowerCase() ?? '';
         final supplier = item['supplier']?.toString().toLowerCase() ?? '';
         final search = _searchQuery.toLowerCase();
 
-        final matchesSearch = _searchQuery.isEmpty ||
+        final matchesSearch =
+            _searchQuery.isEmpty ||
             productName.contains(search) ||
             productCode.contains(search) ||
             supplier.contains(search);
@@ -124,7 +128,7 @@ class _PriceHistoryState extends State<PriceHistory> {
             child: Column(
               children: [
                 // Item Filter
-                DropdownButtonFormField<String>(
+                DropdownButtonFormField<String?>(
                   value: _selectedItemId,
                   decoration: InputDecoration(
                     labelText: 'Filter by Item',
@@ -136,13 +140,13 @@ class _PriceHistoryState extends State<PriceHistory> {
                     fillColor: Colors.white,
                   ),
                   items: [
-                    const DropdownMenuItem(
+                    const DropdownMenuItem<String?>(
                       value: null,
                       child: Text('All Items'),
                     ),
                     ..._items.map((item) {
-                      return DropdownMenuItem(
-                        value: item['id'],
+                      return DropdownMenuItem<String?>(
+                        value: item['id'] as String?,
                         child: Text(
                           '${item['productCode']} - ${item['productName']}',
                           overflow: TextOverflow.ellipsis,
@@ -150,7 +154,7 @@ class _PriceHistoryState extends State<PriceHistory> {
                       );
                     }).toList(),
                   ],
-                  onChanged: (value) {
+                  onChanged: (String? value) {
                     setState(() {
                       _selectedItemId = value;
                     });
@@ -217,15 +221,15 @@ class _PriceHistoryState extends State<PriceHistory> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredHistory.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: _filteredHistory.length,
-                        itemBuilder: (context, index) {
-                          final item = _filteredHistory[index];
-                          return _buildHistoryCard(item);
-                        },
-                      ),
+                ? _buildEmptyState()
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _filteredHistory.length,
+                    itemBuilder: (context, index) {
+                      final item = _filteredHistory[index];
+                      return _buildHistoryCard(item);
+                    },
+                  ),
           ),
         ],
       ),
@@ -233,10 +237,14 @@ class _PriceHistoryState extends State<PriceHistory> {
   }
 
   Widget _buildHistoryCard(Map<String, dynamic> item) {
-    final prevPurchasePrice = (item['previousPurchasePrice'] as num?)?.toDouble() ?? 0.0;
-    final newPurchasePrice = (item['newPurchasePrice'] as num?)?.toDouble() ?? 0.0;
-    final prevSellingPrice = (item['previousSellingPrice'] as num?)?.toDouble() ?? 0.0;
-    final newSellingPrice = (item['newSellingPrice'] as num?)?.toDouble() ?? 0.0;
+    final prevPurchasePrice =
+        (item['previousPurchasePrice'] as num?)?.toDouble() ?? 0.0;
+    final newPurchasePrice =
+        (item['newPurchasePrice'] as num?)?.toDouble() ?? 0.0;
+    final prevSellingPrice =
+        (item['previousSellingPrice'] as num?)?.toDouble() ?? 0.0;
+    final newSellingPrice =
+        (item['newSellingPrice'] as num?)?.toDouble() ?? 0.0;
 
     final purchasePriceChange = newPurchasePrice - prevPurchasePrice;
     final sellingPriceChange = newSellingPrice - prevSellingPrice;
@@ -296,9 +304,21 @@ class _PriceHistoryState extends State<PriceHistory> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _buildInfoChip('Supplier', item['supplier'] ?? 'N/A', Colors.teal),
-                _buildInfoChip('Batch', item['batchNumber'] ?? 'N/A', Colors.purple),
-                _buildInfoChip('Qty', item['quantity']?.toString() ?? '0', Colors.orange),
+                _buildInfoChip(
+                  'Supplier',
+                  item['supplier'] ?? 'N/A',
+                  Colors.teal,
+                ),
+                _buildInfoChip(
+                  'Batch',
+                  item['batchNumber'] ?? 'N/A',
+                  Colors.purple,
+                ),
+                _buildInfoChip(
+                  'Qty',
+                  item['quantity']?.toString() ?? '0',
+                  Colors.orange,
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -333,10 +353,7 @@ class _PriceHistoryState extends State<PriceHistory> {
                 const SizedBox(width: 4),
                 Text(
                   date,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -372,15 +389,16 @@ class _PriceHistoryState extends State<PriceHistory> {
   ) {
     final changePercent = prevPrice > 0 ? ((change / prevPrice) * 100) : 0.0;
     final isIncrease = change > 0;
-    final changeColor = isIncrease ? Colors.red : change < 0 ? Colors.green : Colors.grey;
+    final changeColor = isIncrease
+        ? Colors.red
+        : change < 0
+        ? Colors.green
+        : Colors.grey;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w500),
-        ),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
         Row(
           children: [
             Text(
@@ -396,10 +414,7 @@ class _PriceHistoryState extends State<PriceHistory> {
             const SizedBox(width: 8),
             Text(
               'Rs. ${newPrice.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
             if (change != 0) ...[
               const SizedBox(width: 8),
@@ -437,7 +452,7 @@ class _PriceHistoryState extends State<PriceHistory> {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w500,
-          color: color[700],
+          color: color.withOpacity(0.8),
         ),
       ),
     );

@@ -94,7 +94,8 @@ class _StockViewerState extends State<StockViewer> {
             };
           }
           stockMap[itemId]!['loaded'] =
-              (stockMap[itemId]!['loaded'] as int) + (item['loadingQuantity'] as int? ?? 0);
+              (stockMap[itemId]!['loaded'] as int) +
+              (item['loadingQuantity'] as int? ?? 0);
         }
       }
 
@@ -108,8 +109,10 @@ class _StockViewerState extends State<StockViewer> {
           if (stockMap.containsKey(itemId)) {
             final sold = sale['quantitySold'] as int? ?? 0;
             final returned = sale['quantityReturned'] as int? ?? 0;
-            stockMap[itemId]!['sold'] = (stockMap[itemId]!['sold'] as int) + sold;
-            stockMap[itemId]!['returned'] = (stockMap[itemId]!['returned'] as int) + returned;
+            stockMap[itemId]!['sold'] =
+                (stockMap[itemId]!['sold'] as int) + sold;
+            stockMap[itemId]!['returned'] =
+                (stockMap[itemId]!['returned'] as int) + returned;
           }
         }
       }
@@ -139,8 +142,10 @@ class _StockViewerState extends State<StockViewer> {
         _filteredStock = _stockItems;
       } else {
         _filteredStock = _stockItems.where((item) {
-          final productName = item['productName']?.toString().toLowerCase() ?? '';
-          final productCode = item['productCode']?.toString().toLowerCase() ?? '';
+          final productName =
+              item['productName']?.toString().toLowerCase() ?? '';
+          final productCode =
+              item['productCode']?.toString().toLowerCase() ?? '';
           final brand = item['brand']?.toString().toLowerCase() ?? '';
           final category = item['category']?.toString().toLowerCase() ?? '';
           final search = query.toLowerCase();
@@ -171,7 +176,8 @@ class _StockViewerState extends State<StockViewer> {
           if (_selectedDistributionId != null)
             IconButton(
               icon: const Icon(Icons.refresh),
-              onPressed: () => _loadStockForDistribution(_selectedDistributionId!),
+              onPressed: () =>
+                  _loadStockForDistribution(_selectedDistributionId!),
             ),
         ],
       ),
@@ -268,15 +274,15 @@ class _StockViewerState extends State<StockViewer> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _filteredStock.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: _filteredStock.length,
-                          itemBuilder: (context, index) {
-                            final item = _filteredStock[index];
-                            return _buildStockCard(item);
-                          },
-                        ),
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _filteredStock.length,
+                      itemBuilder: (context, index) {
+                        final item = _filteredStock[index];
+                        return _buildStockCard(item);
+                      },
+                    ),
             ),
           ] else
             Expanded(
@@ -284,14 +290,15 @@ class _StockViewerState extends State<StockViewer> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.business_outlined, size: 64, color: Colors.grey[400]),
+                    Icon(
+                      Icons.business_outlined,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       'Select a distribution to view stock',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -304,12 +311,24 @@ class _StockViewerState extends State<StockViewer> {
 
   Widget _buildSummaryCards() {
     final totalItems = _stockItems.length;
-    final totalLoaded = _stockItems.fold<int>(0, (sum, item) => sum + (item['loaded'] as int));
-    final totalSold = _stockItems.fold<int>(0, (sum, item) => sum + (item['sold'] as int));
-    final totalCurrent = _stockItems.fold<int>(0, (sum, item) => sum + (item['current'] as int));
+    final totalLoaded = _stockItems.fold<int>(
+      0,
+      (sum, item) => sum + (item['loaded'] as int),
+    );
+    final totalSold = _stockItems.fold<int>(
+      0,
+      (sum, item) => sum + (item['sold'] as int),
+    );
+    final totalCurrent = _stockItems.fold<int>(
+      0,
+      (sum, item) => sum + (item['current'] as int),
+    );
     final totalValue = _stockItems.fold<double>(
       0,
-      (sum, item) => sum + ((item['current'] as int) * (item['distributorPrice'] as num? ?? 0).toDouble()),
+      (sum, item) =>
+          sum +
+          ((item['current'] as int) *
+              (item['distributorPrice'] as num? ?? 0).toDouble()),
     );
 
     return Container(
@@ -323,10 +342,18 @@ class _StockViewerState extends State<StockViewer> {
           Row(
             children: [
               Expanded(
-                child: _buildSummaryItem('Total Items', '$totalItems', Colors.blue),
+                child: _buildSummaryItem(
+                  'Total Items',
+                  '$totalItems',
+                  Colors.blue,
+                ),
               ),
               Expanded(
-                child: _buildSummaryItem('Loaded', '$totalLoaded', Colors.green),
+                child: _buildSummaryItem(
+                  'Loaded',
+                  '$totalLoaded',
+                  Colors.green,
+                ),
               ),
               Expanded(
                 child: _buildSummaryItem('Sold', '$totalSold', Colors.orange),
@@ -337,11 +364,19 @@ class _StockViewerState extends State<StockViewer> {
           Row(
             children: [
               Expanded(
-                child: _buildSummaryItem('Current', '$totalCurrent', Colors.purple),
+                child: _buildSummaryItem(
+                  'Current',
+                  '$totalCurrent',
+                  Colors.purple,
+                ),
               ),
               Expanded(
                 flex: 2,
-                child: _buildSummaryItem('Total Value', 'Rs. ${totalValue.toStringAsFixed(2)}', Colors.teal),
+                child: _buildSummaryItem(
+                  'Total Value',
+                  'Rs. ${totalValue.toStringAsFixed(2)}',
+                  Colors.teal,
+                ),
               ),
             ],
           ),
@@ -357,7 +392,7 @@ class _StockViewerState extends State<StockViewer> {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: color[700],
+            color: color.withOpacity(0.8),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -367,7 +402,7 @@ class _StockViewerState extends State<StockViewer> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: color[800],
+            color: color.withOpacity(0.8),
           ),
         ),
       ],
@@ -379,11 +414,20 @@ class _StockViewerState extends State<StockViewer> {
     final sold = item['sold'] as int;
     final returned = item['returned'] as int;
     final current = item['current'] as int;
-    final distributorPrice = (item['distributorPrice'] as num?)?.toDouble() ?? 0.0;
+    final distributorPrice =
+        (item['distributorPrice'] as num?)?.toDouble() ?? 0.0;
     final currentValue = current * distributorPrice;
 
-    final stockStatus = current > 10 ? 'High' : current > 5 ? 'Medium' : 'Low';
-    final statusColor = current > 10 ? Colors.green : current > 5 ? Colors.orange : Colors.red;
+    final stockStatus = current > 10
+        ? 'High'
+        : current > 5
+        ? 'Medium'
+        : 'Low';
+    final statusColor = current > 10
+        ? Colors.green
+        : current > 5
+        ? Colors.orange
+        : Colors.red;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -420,7 +464,10 @@ class _StockViewerState extends State<StockViewer> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -443,7 +490,11 @@ class _StockViewerState extends State<StockViewer> {
               runSpacing: 8,
               children: [
                 _buildInfoChip('Brand', item['brand'] ?? 'N/A', Colors.purple),
-                _buildInfoChip('Category', item['category'] ?? 'N/A', Colors.orange),
+                _buildInfoChip(
+                  'Category',
+                  item['category'] ?? 'N/A',
+                  Colors.orange,
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -463,7 +514,12 @@ class _StockViewerState extends State<StockViewer> {
                     _buildStockRow('Returned:', returned, Colors.teal),
                   ],
                   const Divider(height: 12),
-                  _buildStockRow('Current Stock:', current, Colors.green, isBold: true),
+                  _buildStockRow(
+                    'Current Stock:',
+                    current,
+                    Colors.green,
+                    isBold: true,
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -491,19 +547,26 @@ class _StockViewerState extends State<StockViewer> {
     );
   }
 
-  Widget _buildStockRow(String label, int value, Color color, {bool isBold = false}) {
+  Widget _buildStockRow(
+    String label,
+    int value,
+    Color color, {
+    bool isBold = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal),
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          ),
         ),
         Text(
           '$value',
           style: TextStyle(
             fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-            color: color[700],
+            color: color.withOpacity(0.8),
           ),
         ),
       ],
@@ -522,7 +585,7 @@ class _StockViewerState extends State<StockViewer> {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w500,
-          color: color[700],
+          color: color.withOpacity(0.8),
         ),
       ),
     );

@@ -42,10 +42,7 @@ class _ManageItemsState extends State<ManageItems> {
 
       final items = snapshot.docs.map((doc) {
         final data = doc.data();
-        return {
-          'id': doc.id,
-          ...data,
-        };
+        return {'id': doc.id, ...data};
       }).toList();
 
       setState(() {
@@ -68,8 +65,10 @@ class _ManageItemsState extends State<ManageItems> {
         _filteredItems = _items;
       } else {
         _filteredItems = _items.where((item) {
-          final productName = item['productName']?.toString().toLowerCase() ?? '';
-          final productCode = item['productCode']?.toString().toLowerCase() ?? '';
+          final productName =
+              item['productName']?.toString().toLowerCase() ?? '';
+          final productCode =
+              item['productCode']?.toString().toLowerCase() ?? '';
           final brand = item['brand']?.toString().toLowerCase() ?? '';
           final category = item['category']?.toString().toLowerCase() ?? '';
           final supplier = item['supplier']?.toString().toLowerCase() ?? '';
@@ -88,9 +87,7 @@ class _ManageItemsState extends State<ManageItems> {
   Future<void> _editItem(Map<String, dynamic> item) async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => EditItemScreen(item: item),
-      ),
+      MaterialPageRoute(builder: (context) => EditItemScreen(item: item)),
     );
 
     if (result == true) {
@@ -111,9 +108,7 @@ class _ManageItemsState extends State<ManageItems> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Delete'),
           ),
         ],
@@ -145,10 +140,7 @@ class _ManageItemsState extends State<ManageItems> {
         elevation: 0,
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadItems,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadItems),
         ],
       ),
       body: Column(
@@ -204,15 +196,15 @@ class _ManageItemsState extends State<ManageItems> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredItems.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16.0),
-                        itemCount: _filteredItems.length,
-                        itemBuilder: (context, index) {
-                          final item = _filteredItems[index];
-                          return _buildItemCard(item);
-                        },
-                      ),
+                ? _buildEmptyState()
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16.0),
+                    itemCount: _filteredItems.length,
+                    itemBuilder: (context, index) {
+                      final item = _filteredItems[index];
+                      return _buildItemCard(item);
+                    },
+                  ),
           ),
         ],
       ),
@@ -270,10 +262,8 @@ class _ManageItemsState extends State<ManageItems> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteItem(
-                          item['id'],
-                          item['productName'] ?? '',
-                        ),
+                        onPressed: () =>
+                            _deleteItem(item['id'], item['productName'] ?? ''),
                         tooltip: 'Delete',
                       ),
                     ],
@@ -285,9 +275,21 @@ class _ManageItemsState extends State<ManageItems> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _buildInfoChip('Brand', item['brand'] ?? 'N/A', Colors.purple),
-                  _buildInfoChip('Category', item['category'] ?? 'N/A', Colors.orange),
-                  _buildInfoChip('Supplier', item['supplier'] ?? 'N/A', Colors.teal),
+                  _buildInfoChip(
+                    'Brand',
+                    item['brand'] ?? 'N/A',
+                    Colors.purple,
+                  ),
+                  _buildInfoChip(
+                    'Category',
+                    item['category'] ?? 'N/A',
+                    Colors.orange,
+                  ),
+                  _buildInfoChip(
+                    'Supplier',
+                    item['supplier'] ?? 'N/A',
+                    Colors.teal,
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -316,7 +318,10 @@ class _ManageItemsState extends State<ManageItems> {
                         const Text('Selling Price:'),
                         Text(
                           'Rs. ${sellingPrice.toStringAsFixed(2)}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
                         ),
                       ],
                     ),
@@ -341,7 +346,7 @@ class _ManageItemsState extends State<ManageItems> {
     );
   }
 
-  Widget _buildInfoChip(String label, String value, Color color) {
+  Widget _buildInfoChip(String label, String value, MaterialColor color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -447,18 +452,40 @@ class _EditItemScreenState extends State<EditItemScreen> {
   @override
   void initState() {
     super.initState();
-    _productNameController = TextEditingController(text: widget.item['productName'] ?? '');
-    _productCodeController = TextEditingController(text: widget.item['productCode'] ?? '');
+    _productNameController = TextEditingController(
+      text: widget.item['productName'] ?? '',
+    );
+    _productCodeController = TextEditingController(
+      text: widget.item['productCode'] ?? '',
+    );
     _brandController = TextEditingController(text: widget.item['brand'] ?? '');
-    _categoryController = TextEditingController(text: widget.item['category'] ?? '');
-    _supplierController = TextEditingController(text: widget.item['supplier'] ?? '');
-    _unitTypeController = TextEditingController(text: widget.item['unitType'] ?? 'pcs');
-    _unitsPerCaseController = TextEditingController(text: (widget.item['unitsPerCase'] ?? 0).toString());
-    _focController = TextEditingController(text: (widget.item['foc'] ?? 0).toString());
-    _distributorMarginController = TextEditingController(text: (widget.item['distributorMargin'] ?? 0).toString());
-    _sellingPriceController = TextEditingController(text: (widget.item['sellingPrice'] ?? 0).toString());
-    _mrpController = TextEditingController(text: (widget.item['mrp'] ?? 0).toString());
-    _distributorPriceController = TextEditingController(text: (widget.item['distributorPrice'] ?? 0).toString());
+    _categoryController = TextEditingController(
+      text: widget.item['category'] ?? '',
+    );
+    _supplierController = TextEditingController(
+      text: widget.item['supplier'] ?? '',
+    );
+    _unitTypeController = TextEditingController(
+      text: widget.item['unitType'] ?? 'pcs',
+    );
+    _unitsPerCaseController = TextEditingController(
+      text: (widget.item['unitsPerCase'] ?? 0).toString(),
+    );
+    _focController = TextEditingController(
+      text: (widget.item['foc'] ?? 0).toString(),
+    );
+    _distributorMarginController = TextEditingController(
+      text: (widget.item['distributorMargin'] ?? 0).toString(),
+    );
+    _sellingPriceController = TextEditingController(
+      text: (widget.item['sellingPrice'] ?? 0).toString(),
+    );
+    _mrpController = TextEditingController(
+      text: (widget.item['mrp'] ?? 0).toString(),
+    );
+    _distributorPriceController = TextEditingController(
+      text: (widget.item['distributorPrice'] ?? 0).toString(),
+    );
   }
 
   @override
@@ -480,7 +507,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
 
   void _calculateDistributorPrice() {
     final sellingPrice = double.tryParse(_sellingPriceController.text) ?? 0.0;
-    final marginPercentage = double.tryParse(_distributorMarginController.text) ?? 0.0;
+    final marginPercentage =
+        double.tryParse(_distributorMarginController.text) ?? 0.0;
     final distributorPrice = sellingPrice * (1 - (marginPercentage / 100));
     _distributorPriceController.text = distributorPrice.toStringAsFixed(2);
   }
@@ -504,14 +532,19 @@ class _EditItemScreenState extends State<EditItemScreen> {
         'unitType': _unitTypeController.text.trim(),
         'unitsPerCase': int.tryParse(_unitsPerCaseController.text) ?? 0,
         'foc': int.tryParse(_focController.text) ?? 0,
-        'distributorMargin': double.tryParse(_distributorMarginController.text) ?? 0.0,
-        'distributorPrice': double.tryParse(_distributorPriceController.text) ?? 0.0,
+        'distributorMargin':
+            double.tryParse(_distributorMarginController.text) ?? 0.0,
+        'distributorPrice':
+            double.tryParse(_distributorPriceController.text) ?? 0.0,
         'sellingPrice': double.tryParse(_sellingPriceController.text) ?? 0.0,
         'mrp': double.tryParse(_mrpController.text) ?? 0.0,
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      await _firestore.collection('items').doc(widget.item['id']).update(itemData);
+      await _firestore
+          .collection('items')
+          .doc(widget.item['id'])
+          .update(itemData);
 
       if (!mounted) return;
       Navigator.pop(context, true);
@@ -633,7 +666,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
               _buildTextField(
                 controller: _mrpController,
                 label: 'MRP',
-                icon: Icons.price_tag,
+                icon: Icons.price_change,
                 keyboardType: TextInputType.number,
                 required: true,
               ),
@@ -730,9 +763,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
       decoration: InputDecoration(
         labelText: label + (required ? ' *' : ''),
         prefixIcon: Icon(icon),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
         fillColor: enabled ? Colors.white : Colors.grey[200],
       ),

@@ -57,8 +57,9 @@ class _AddStockState extends State<AddStock> {
   Future<void> _loadSuppliers() async {
     try {
       // TODO: Uncomment when Firebase is added
-      final QuerySnapshot itemsSnapshot =
-          await FirebaseFirestore.instance.collection('items').get();
+      final QuerySnapshot itemsSnapshot = await FirebaseFirestore.instance
+          .collection('items')
+          .get();
 
       Set<String> uniqueSuppliers = {};
       for (var doc in itemsSnapshot.docs) {
@@ -97,11 +98,10 @@ class _AddStockState extends State<AddStock> {
 
     try {
       // TODO: Uncomment when Firebase is added
-      final QuerySnapshot itemsSnapshot =
-          await FirebaseFirestore.instance
-              .collection('items')
-              .orderBy('productName')
-              .get();
+      final QuerySnapshot itemsSnapshot = await FirebaseFirestore.instance
+          .collection('items')
+          .orderBy('productName')
+          .get();
 
       List<Map<String, dynamic>> items = [];
       for (var doc in itemsSnapshot.docs) {
@@ -197,8 +197,9 @@ class _AddStockState extends State<AddStock> {
     }
 
     setState(() {
-      _filteredItems =
-          _allItems.where((item) => item['supplier'] == supplier).toList();
+      _filteredItems = _allItems
+          .where((item) => item['supplier'] == supplier)
+          .toList();
     });
   }
 
@@ -302,7 +303,7 @@ class _AddStockState extends State<AddStock> {
                       controller: sellingPriceController,
                       label: "Selling Price *",
                       hint: "Enter selling price",
-                      icon: Icons.price_tag,
+                      icon: Icons.price_change,
                       keyboardType: TextInputType.number,
                       isRequired: true,
                     ),
@@ -361,23 +362,22 @@ class _AddStockState extends State<AddStock> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child:
-                          _isLoading
-                              ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                              : const Text(
-                                "Add Stock",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
                               ),
+                            )
+                          : const Text(
+                              "Add Stock",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -489,17 +489,16 @@ class _AddStockState extends State<AddStock> {
         }
         return null;
       },
-      items:
-          _suppliers.map((String supplier) {
-            return DropdownMenuItem<String>(
-              value: supplier,
-              child: Text(
-                supplier,
-                style: const TextStyle(fontSize: 14),
-                overflow: TextOverflow.ellipsis,
-              ),
-            );
-          }).toList(),
+      items: _suppliers.map((String supplier) {
+        return DropdownMenuItem<String>(
+          value: supplier,
+          child: Text(
+            supplier,
+            style: const TextStyle(fontSize: 14),
+            overflow: TextOverflow.ellipsis,
+          ),
+        );
+      }).toList(),
       onChanged: (String? newValue) {
         setState(() {
           _selectedSupplier = newValue;
@@ -517,12 +516,11 @@ class _AddStockState extends State<AddStock> {
       value: _selectedItemId,
       decoration: _buildInputDecoration(
         label: 'Item *',
-        hint:
-            _selectedSupplier == null
-                ? 'Select supplier first'
-                : _isLoadingItems
-                ? 'Loading items...'
-                : 'Select item',
+        hint: _selectedSupplier == null
+            ? 'Select supplier first'
+            : _isLoadingItems
+            ? 'Loading items...'
+            : 'Select item',
         icon: Icons.inventory_2_outlined,
       ),
       validator: (value) {
@@ -531,57 +529,58 @@ class _AddStockState extends State<AddStock> {
         }
         return null;
       },
-      items:
-          _filteredItems.map((item) {
-            return DropdownMenuItem<String>(
-              value: item['id'],
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+      items: _filteredItems.map((item) {
+        return DropdownMenuItem<String>(
+          value: item['id'],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${item['productCode']} - ${item['productName']}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Row(
                 children: [
                   Text(
-                    '${item['productCode']} - ${item['productName']}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                    'Unit: ${item['unitType']}',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                   ),
-                  Row(
-                    children: [
-                      Text(
-                        'Unit: ${item['unitType']}',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '• Brand: ${item['brand'] ?? 'N/A'}',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                      ),
-                    ],
+                  const SizedBox(width: 8),
+                  Text(
+                    '• Brand: ${item['brand'] ?? 'N/A'}',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                   ),
                 ],
               ),
-            );
-          }).toList(),
-      onChanged:
-          (_selectedSupplier == null || _isLoadingItems)
-              ? null
-              : (String? newValue) {
-                setState(() {
-                  _selectedItemId = newValue;
-                  _selectedItemData =
-                      newValue != null ? _getItemById(newValue) : null;
+            ],
+          ),
+        );
+      }).toList(),
+      onChanged: (_selectedSupplier == null || _isLoadingItems)
+          ? null
+          : (String? newValue) {
+              setState(() {
+                _selectedItemId = newValue;
+                _selectedItemData = newValue != null
+                    ? _getItemById(newValue)
+                    : null;
 
-                  // Populate price fields with default values
-                  if (_selectedItemData != null) {
-                    purchasePriceController.text =
-                        (_selectedItemData!['distributorPrice'] ?? 0.0).toStringAsFixed(2);
-                    sellingPriceController.text =
-                        (_selectedItemData!['sellingPrice'] ?? 0.0).toStringAsFixed(2);
-                  }
-                });
-              },
+                // Populate price fields with default values
+                if (_selectedItemData != null) {
+                  purchasePriceController.text =
+                      (_selectedItemData!['distributorPrice'] ?? 0.0)
+                          .toStringAsFixed(2);
+                  sellingPriceController.text =
+                      (_selectedItemData!['sellingPrice'] ?? 0.0)
+                          .toStringAsFixed(2);
+                }
+              });
+            },
       isExpanded: true,
       selectedItemBuilder: (BuildContext context) {
         return _filteredItems.map((item) {
@@ -611,19 +610,17 @@ class _AddStockState extends State<AddStock> {
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
-      inputFormatters:
-          keyboardType == TextInputType.number
-              ? [FilteringTextInputFormatter.digitsOnly]
-              : null,
-      validator:
-          isRequired
-              ? (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return '$label is required';
-                }
-                return null;
+      inputFormatters: keyboardType == TextInputType.number
+          ? [FilteringTextInputFormatter.digitsOnly]
+          : null,
+      validator: isRequired
+          ? (value) {
+              if (value == null || value.trim().isEmpty) {
+                return '$label is required';
               }
-              : null,
+              return null;
+            }
+          : null,
       decoration: _buildInputDecoration(
         label: label + (isRequired ? ' *' : ''),
         hint: hint,
@@ -714,7 +711,8 @@ class _AddStockState extends State<AddStock> {
     });
 
     try {
-      final purchasePrice = double.tryParse(purchasePriceController.text) ?? 0.0;
+      final purchasePrice =
+          double.tryParse(purchasePriceController.text) ?? 0.0;
       final sellingPrice = double.tryParse(sellingPriceController.text) ?? 0.0;
       final quantity = int.tryParse(quantityController.text) ?? 0;
 
@@ -748,7 +746,8 @@ class _AddStockState extends State<AddStock> {
       final masterPurchasePrice = _selectedItemData!['distributorPrice'] ?? 0.0;
       final masterSellingPrice = _selectedItemData!['sellingPrice'] ?? 0.0;
 
-      if (purchasePrice != masterPurchasePrice || sellingPrice != masterSellingPrice) {
+      if (purchasePrice != masterPurchasePrice ||
+          sellingPrice != masterSellingPrice) {
         await FirebaseFirestore.instance.collection('price_history').add({
           'itemId': _selectedItemId,
           'productCode': _selectedItemData!['productCode'],
