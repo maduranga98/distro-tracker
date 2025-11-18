@@ -133,7 +133,7 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
                   return Column(
                     children: [
                       _buildSummaryItem(
-                        'Total Sales Value',
+                        'Net Sales Value',
                         'Rs. ${data['totalSales'].toStringAsFixed(2)}',
                         Colors.green,
                       ),
@@ -143,9 +143,19 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
                         Colors.blue,
                       ),
                       _buildSummaryItem(
+                        'Total Returns',
+                        '${data['totalReturns']}',
+                        Colors.orange,
+                      ),
+                      _buildSummaryItem(
+                        'Total Damaged',
+                        '${data['totalDamaged']}',
+                        Colors.red,
+                      ),
+                      _buildSummaryItem(
                         'Total Discounts',
                         'Rs. ${data['totalDiscounts'].toStringAsFixed(2)}',
-                        Colors.orange,
+                        Colors.deepOrange,
                       ),
                       _buildSummaryItem(
                         'Free Issues Given',
@@ -397,13 +407,21 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
     int totalItemsSold = 0;
     double totalDiscounts = 0;
     int totalFreeIssues = 0;
+    int totalReturns = 0;
+    int totalDamaged = 0;
 
     for (var doc in snapshot.docs) {
       final data = doc.data();
-      totalSales += (data['totalValue'] ?? 0.0);
+
+      // Use netValue if available (enhanced unloading), otherwise use totalValue
+      final salesValue = (data['netValue'] ?? data['totalValue'] ?? 0.0) as num;
+      totalSales += salesValue.toDouble();
+
       totalItemsSold += ((data['totalQuantity'] ?? 0) as num).toInt();
-      totalDiscounts += (data['totalDiscounts'] ?? 0.0);
+      totalDiscounts += ((data['totalDiscounts'] ?? 0.0) as num).toDouble();
       totalFreeIssues += ((data['totalFreeIssues'] ?? 0) as num).toInt();
+      totalReturns += ((data['totalReturns'] ?? 0) as num).toInt();
+      totalDamaged += ((data['totalDamaged'] ?? 0) as num).toInt();
     }
 
     return {
@@ -411,6 +429,8 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
       'totalItemsSold': totalItemsSold,
       'totalDiscounts': totalDiscounts,
       'totalFreeIssues': totalFreeIssues,
+      'totalReturns': totalReturns,
+      'totalDamaged': totalDamaged,
     };
   }
 
@@ -422,35 +442,78 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
     );
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
-    var query = _firestore
-        .collection('expenses')
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .where('date', isLessThan: Timestamp.fromDate(endOfDay));
-
-    if (selectedVehicleId != null) {
-      query = query.where('vehicleId', isEqualTo: selectedVehicleId);
-    }
-
-    final snapshot = await query.get();
-
     double totalExpenses = 0;
     double fuelExpenses = 0;
     double salaryExpenses = 0;
     double otherExpenses = 0;
 
-    for (var doc in snapshot.docs) {
+    // Get expenses from unloading collection (new structure)
+    var unloadingQuery = _firestore
+        .collection('unloading')
+        .where('unloadedAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('unloadedAt', isLessThan: Timestamp.fromDate(endOfDay));
+
+    if (selectedVehicleId != null) {
+      unloadingQuery = unloadingQuery.where('vehicleId', isEqualTo: selectedVehicleId);
+    }
+
+    final unloadingSnapshot = await unloadingQuery.get();
+
+    for (var doc in unloadingSnapshot.docs) {
       final data = doc.data();
-      final amount = data['amount'] ?? 0.0;
+      final expenses = data['expenses'] as List<dynamic>?;
+
+      if (expenses != null) {
+        for (var expense in expenses) {
+          final expenseMap = expense as Map<String, dynamic>;
+          final amount = (expenseMap['amount'] ?? 0.0) as num;
+          final type = expenseMap['type'] ?? '';
+
+          totalExpenses += amount.toDouble();
+
+          if (type == 'fuel') {
+            fuelExpenses += amount.toDouble();
+          } else if (type == 'salary') {
+            salaryExpenses += amount.toDouble();
+          } else {
+            otherExpenses += amount.toDouble();
+          }
+        }
+      }
+
+      // Also add totalExpenses field if available
+      final totalExp = (data['totalExpenses'] ?? 0.0) as num;
+      if (totalExp > 0 && (expenses == null || expenses.isEmpty)) {
+        totalExpenses += totalExp.toDouble();
+        otherExpenses += totalExp.toDouble();
+      }
+    }
+
+    // Also check old expenses collection for backward compatibility
+    var expensesQuery = _firestore
+        .collection('expenses')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('date', isLessThan: Timestamp.fromDate(endOfDay));
+
+    if (selectedVehicleId != null) {
+      expensesQuery = expensesQuery.where('vehicleId', isEqualTo: selectedVehicleId);
+    }
+
+    final expensesSnapshot = await expensesQuery.get();
+
+    for (var doc in expensesSnapshot.docs) {
+      final data = doc.data();
+      final amount = (data['amount'] ?? 0.0) as num;
       final type = data['expenseType'] ?? '';
 
-      totalExpenses += amount;
+      totalExpenses += amount.toDouble();
 
       if (type == 'fuel') {
-        fuelExpenses += amount;
+        fuelExpenses += amount.toDouble();
       } else if (type == 'salary') {
-        salaryExpenses += amount;
+        salaryExpenses += amount.toDouble();
       } else {
-        otherExpenses += amount;
+        otherExpenses += amount.toDouble();
       }
     }
 
@@ -470,16 +533,17 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
     );
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
-    var query = _firestore
-        .collection('payments')
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .where('date', isLessThan: Timestamp.fromDate(endOfDay));
+    // Get payments from unloading collection (new structure)
+    var unloadingQuery = _firestore
+        .collection('unloading')
+        .where('unloadedAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('unloadedAt', isLessThan: Timestamp.fromDate(endOfDay));
 
     if (selectedVehicleId != null) {
-      query = query.where('vehicleId', isEqualTo: selectedVehicleId);
+      unloadingQuery = unloadingQuery.where('vehicleId', isEqualTo: selectedVehicleId);
     }
 
-    final snapshot = await query.get();
+    final unloadingSnapshot = await unloadingQuery.get();
 
     double totalPayments = 0;
     double cash = 0;
@@ -487,21 +551,68 @@ class _DailyReportsScreenState extends State<DailyReportsScreen> {
     double creditsReceived = 0;
     double cheques = 0;
 
-    for (var doc in snapshot.docs) {
+    // Get payments from unloading records (new enhanced structure)
+    for (var doc in unloadingSnapshot.docs) {
       final data = doc.data();
-      final amount = data['amount'] ?? 0.0;
-      final type = data['paymentType'] ?? '';
+      final payments = data['payments'] as Map<String, dynamic>?;
 
-      totalPayments += amount;
+      if (payments != null) {
+        final cashAmount = (payments['cash'] ?? 0.0) as num;
+        final creditAmount = (payments['credit'] ?? 0.0) as num;
+        final creditReceivedAmount = (payments['creditReceived'] ?? 0.0) as num;
+        final chequeAmount = (payments['cheque'] ?? 0.0) as num;
 
-      if (type == 'cash') {
-        cash += amount;
-      } else if (type == 'credit') {
-        credits += amount;
-      } else if (type == 'credit_received') {
-        creditsReceived += amount;
-      } else if (type == 'cheque') {
-        cheques += amount;
+        cash += cashAmount.toDouble();
+        credits += creditAmount.toDouble();
+        creditsReceived += creditReceivedAmount.toDouble();
+        cheques += chequeAmount.toDouble();
+        totalPayments += cashAmount.toDouble() + creditReceivedAmount.toDouble() + chequeAmount.toDouble();
+      }
+    }
+
+    // Also check old payments collection for backward compatibility
+    var paymentsQuery = _firestore
+        .collection('payments')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('date', isLessThan: Timestamp.fromDate(endOfDay));
+
+    if (selectedVehicleId != null) {
+      paymentsQuery = paymentsQuery.where('vehicleId', isEqualTo: selectedVehicleId);
+    }
+
+    final paymentsSnapshot = await paymentsQuery.get();
+
+    for (var doc in paymentsSnapshot.docs) {
+      final data = doc.data();
+
+      // New structure from enhanced unloading
+      if (data.containsKey('cash')) {
+        final cashAmount = (data['cash'] ?? 0.0) as num;
+        final creditAmount = (data['credit'] ?? 0.0) as num;
+        final creditReceivedAmount = (data['creditReceived'] ?? 0.0) as num;
+        final chequeAmount = (data['cheque'] ?? 0.0) as num;
+
+        cash += cashAmount.toDouble();
+        credits += creditAmount.toDouble();
+        creditsReceived += creditReceivedAmount.toDouble();
+        cheques += chequeAmount.toDouble();
+        totalPayments += cashAmount.toDouble() + creditReceivedAmount.toDouble() + chequeAmount.toDouble();
+      } else {
+        // Old structure (if any)
+        final amount = (data['amount'] ?? 0.0) as num;
+        final type = data['paymentType'] ?? '';
+
+        totalPayments += amount.toDouble();
+
+        if (type == 'cash') {
+          cash += amount.toDouble();
+        } else if (type == 'credit') {
+          credits += amount.toDouble();
+        } else if (type == 'credit_received') {
+          creditsReceived += amount.toDouble();
+        } else if (type == 'cheque') {
+          cheques += amount.toDouble();
+        }
       }
     }
 

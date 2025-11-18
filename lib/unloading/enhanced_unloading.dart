@@ -233,18 +233,41 @@ class _EnhancedUnloadingScreenState extends State<EnhancedUnloadingScreen> {
     String distributionId,
   ) async {
     try {
-      final vehicleDoc = await _firestore.collection('vehicles').doc(vehicleId).get();
-      final distributionDoc =
-          await _firestore.collection('distributions').doc(distributionId).get();
+      // Check if IDs are empty
+      if (vehicleId.isEmpty && distributionId.isEmpty) {
+        return {
+          'vehicleName': 'No Vehicle',
+          'distributionName': 'No Distribution'
+        };
+      }
+
+      // Fetch both documents in parallel
+      final results = await Future.wait([
+        vehicleId.isNotEmpty
+            ? _firestore.collection('vehicles').doc(vehicleId).get()
+            : Future.value(null),
+        distributionId.isNotEmpty
+            ? _firestore.collection('distributions').doc(distributionId).get()
+            : Future.value(null),
+      ]);
+
+      final vehicleDoc = results[0];
+      final distributionDoc = results[1];
 
       return {
-        'vehicleName':
-            (vehicleDoc.data()?['vehicleName'] ?? 'Unknown') as String,
-        'distributionName':
-            (distributionDoc.data()?['name'] ?? 'Unknown') as String,
+        'vehicleName': vehicleDoc != null && vehicleDoc.exists
+            ? (vehicleDoc.data()?['vehicleName'] ?? 'Unknown Vehicle')
+            : 'Unknown Vehicle',
+        'distributionName': distributionDoc != null && distributionDoc.exists
+            ? (distributionDoc.data()?['name'] ?? 'Unknown Distribution')
+            : 'Unknown Distribution',
       };
     } catch (e) {
-      return {'vehicleName': 'Unknown', 'distributionName': 'Unknown'};
+      print('Error fetching vehicle/distribution info: $e');
+      return {
+        'vehicleName': 'Error: ${vehicleId.substring(0, 8)}...',
+        'distributionName': 'Error: ${distributionId.substring(0, 8)}...'
+      };
     }
   }
 
