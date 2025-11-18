@@ -12,6 +12,7 @@ import 'package:distro_tracker_flutter/unloading/enhanced_unloading.dart';
 import 'package:distro_tracker_flutter/expenses/expenses.dart';
 import 'package:distro_tracker_flutter/payments/payments.dart';
 import 'package:distro_tracker_flutter/reports/daily_reports.dart';
+import 'package:distro_tracker_flutter/reports/daily_unloading_details.dart';
 import 'package:distro_tracker_flutter/invoices/invoice_list.dart';
 
 class Dashboard extends StatelessWidget {
@@ -274,20 +275,44 @@ class Dashboard extends StatelessWidget {
             // Reports Section
             _buildSectionTitle('Reports & Analytics'),
             const SizedBox(height: 12),
-            _buildDashboardCard(
-              context,
-              title: 'Daily Reports',
-              subtitle: 'View accounts & sales reports',
-              icon: Icons.assessment,
-              color: Colors.deepPurple,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const DailyReportsScreen(),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDashboardCard(
+                    context,
+                    title: 'Daily Reports',
+                    subtitle: 'View accounts & sales reports',
+                    icon: Icons.assessment,
+                    color: Colors.deepPurple,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const DailyReportsScreen(),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDashboardCard(
+                    context,
+                    title: 'Daily Details',
+                    subtitle: 'View detailed unloading records',
+                    icon: Icons.list_alt,
+                    color: Colors.indigo,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const DailyUnloadingDetailsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 24),
