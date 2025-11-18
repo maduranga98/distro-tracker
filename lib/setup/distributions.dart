@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:distro_tracker_flutter/setup/distribution_routes.dart';
 
 class DistributionsScreen extends StatefulWidget {
   const DistributionsScreen({super.key});
@@ -161,6 +162,16 @@ class _DistributionsScreenState extends State<DistributionsScreen> {
                     icon: const Icon(Icons.more_vert),
                     itemBuilder: (context) => [
                       const PopupMenuItem(
+                        value: 'routes',
+                        child: Row(
+                          children: [
+                            Icon(Icons.route, size: 20, color: Colors.purple),
+                            SizedBox(width: 8),
+                            Text('Manage Routes'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
                         value: 'edit',
                         child: Row(
                           children: [
@@ -182,7 +193,17 @@ class _DistributionsScreenState extends State<DistributionsScreen> {
                       ),
                     ],
                     onSelected: (value) {
-                      if (value == 'edit') {
+                      if (value == 'routes') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DistributionRoutes(
+                              distributionId: doc.id,
+                              distributionName: name,
+                            ),
+                          ),
+                        );
+                      } else if (value == 'edit') {
                         _showAddEditDialog(
                           distributionId: doc.id,
                           name: name,
