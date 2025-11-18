@@ -297,17 +297,22 @@ class _InvoiceListState extends State<InvoiceList> {
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Text(
                             'Total Invoices',
                             style: TextStyle(fontSize: 12, color: Colors.grey),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
-                            _totalInvoices.toString(),
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              _totalInvoices.toString(),
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                              ),
                             ),
                           ),
                         ],
@@ -322,17 +327,22 @@ class _InvoiceListState extends State<InvoiceList> {
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Text(
                             'Total Value',
                             style: TextStyle(fontSize: 12, color: Colors.grey),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
-                            'Rs. ${_totalInvoiceValue.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Rs. ${_totalInvoiceValue.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange,
+                              ),
                             ),
                           ),
                         ],
@@ -347,17 +357,22 @@ class _InvoiceListState extends State<InvoiceList> {
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Text(
                             'Total Profit',
                             style: TextStyle(fontSize: 12, color: Colors.grey),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
-                            'Rs. ${_totalProfit.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Rs. ${_totalProfit.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green,
+                              ),
                             ),
                           ),
                         ],
@@ -517,9 +532,12 @@ class _InvoiceListState extends State<InvoiceList> {
                                     color: Colors.grey[600],
                                   ),
                                   const SizedBox(width: 4),
-                                  Text(
-                                    invoice['distributionName'] ?? 'N/A',
-                                    style: TextStyle(color: Colors.grey[600]),
+                                  Flexible(
+                                    child: Text(
+                                      invoice['distributionName'] ?? 'N/A',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                   const SizedBox(width: 16),
                                   Icon(
@@ -528,9 +546,12 @@ class _InvoiceListState extends State<InvoiceList> {
                                     color: Colors.grey[600],
                                   ),
                                   const SizedBox(width: 4),
-                                  Text(
-                                    invoice['supplier'] ?? 'N/A',
-                                    style: TextStyle(color: Colors.grey[600]),
+                                  Flexible(
+                                    child: Text(
+                                      invoice['supplier'] ?? 'N/A',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -557,43 +578,55 @@ class _InvoiceListState extends State<InvoiceList> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Items: ${(invoice['items'] as List).length}',
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                      Text(
-                                        'Qty: ${invoice['totalQuantity']} | FOC: ${invoice['totalFOC']}',
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                    ],
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Items: ${(invoice['items'] as List).length}',
+                                          style: const TextStyle(fontSize: 12),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          'Qty: ${invoice['totalQuantity']} | FOC: ${invoice['totalFOC']}',
+                                          style: const TextStyle(fontSize: 12),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        'Rs. ${(invoice['totalValue'] ?? 0).toStringAsFixed(2)}',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.blue,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Text(
+                                            'Rs. ${(invoice['totalValue'] ?? 0).toStringAsFixed(2)}',
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.blue,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      Text(
-                                        'Profit: Rs. ${(invoice['totalProfit'] ?? 0).toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color:
-                                              (invoice['totalProfit'] ?? 0) >= 0
-                                              ? Colors.green
-                                              : Colors.red,
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Text(
+                                            'Profit: Rs. ${(invoice['totalProfit'] ?? 0).toStringAsFixed(2)}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color:
+                                                  (invoice['totalProfit'] ?? 0) >= 0
+                                                  ? Colors.green
+                                                  : Colors.red,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
