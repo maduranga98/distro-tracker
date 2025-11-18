@@ -438,7 +438,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
   late TextEditingController _productCodeController;
   late TextEditingController _brandController;
   late TextEditingController _categoryController;
-  late TextEditingController _supplierController;
   late TextEditingController _unitTypeController;
   late TextEditingController _unitsPerCaseController;
   late TextEditingController _focController;
@@ -447,7 +446,10 @@ class _EditItemScreenState extends State<EditItemScreen> {
   late TextEditingController _mrpController;
   late TextEditingController _distributorPriceController;
 
+  List<String> _suppliers = [];
+  String? _selectedSupplier;
   bool _isSaving = false;
+  bool _isLoadingSuppliers = true;
 
   @override
   void initState() {
@@ -461,9 +463,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _brandController = TextEditingController(text: widget.item['brand'] ?? '');
     _categoryController = TextEditingController(
       text: widget.item['category'] ?? '',
-    );
-    _supplierController = TextEditingController(
-      text: widget.item['supplier'] ?? '',
     );
     _unitTypeController = TextEditingController(
       text: widget.item['unitType'] ?? 'pcs',
@@ -486,6 +485,31 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _distributorPriceController = TextEditingController(
       text: (widget.item['distributorPrice'] ?? 0).toString(),
     );
+    _selectedSupplier = widget.item['supplier'] ?? '';
+    _loadSuppliers();
+  }
+
+  Future<void> _loadSuppliers() async {
+    try {
+      final snapshot = await _firestore.collection('items').get();
+
+      Set<String> supplierSet = {};
+      for (var doc in snapshot.docs) {
+        final supplier = doc.data()['supplier'];
+        if (supplier != null && supplier.toString().isNotEmpty) {
+          supplierSet.add(supplier.toString());
+        }
+      }
+
+      setState(() {
+        _suppliers = supplierSet.toList()..sort();
+        _isLoadingSuppliers = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingSuppliers = false;
+      });
+    }
   }
 
   @override
@@ -494,7 +518,6 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _productCodeController.dispose();
     _brandController.dispose();
     _categoryController.dispose();
-    _supplierController.dispose();
     _unitTypeController.dispose();
     _unitsPerCaseController.dispose();
     _focController.dispose();
@@ -513,6 +536,38 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _distributorPriceController.text = distributorPrice.toStringAsFixed(2);
   }
 
+  Future<String?> _showAddSupplierDialog() async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Supplier'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Supplier Name',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                Navigator.pop(context, controller.text.trim());
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveItem() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -528,7 +583,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
         'productCode': _productCodeController.text.trim(),
         'brand': _brandController.text.trim(),
         'category': _categoryController.text.trim(),
-        'supplier': _supplierController.text.trim(),
+        'supplier': _selectedSupplier ?? '',
         'unitType': _unitTypeController.text.trim(),
         'unitsPerCase': int.tryParse(_unitsPerCaseController.text) ?? 0,
         'foc': int.tryParse(_focController.text) ?? 0,
@@ -626,12 +681,54 @@ class _EditItemScreenState extends State<EditItemScreen> {
                 required: true,
               ),
               const SizedBox(height: 12),
-              _buildTextField(
-                controller: _supplierController,
-                label: 'Supplier',
-                icon: Icons.local_shipping,
-                required: true,
-              ),
+              _isLoadingSuppliers
+                  ? const Center(child: CircularProgressIndicator())
+                  : DropdownButtonFormField<String>(
+                      value: _selectedSupplier,
+                      decoration: InputDecoration(
+                        labelText: 'Supplier *',
+                        prefixIcon: const Icon(Icons.local_shipping),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      items: _suppliers.map((supplier) {
+                        return DropdownMenuItem<String>(
+                          value: supplier,
+                          child: Text(supplier),
+                        );
+                      }).toList()
+                        ..add(
+                          const DropdownMenuItem<String>(
+                            value: '__new__',
+                            child: Text('+ Add New Supplier'),
+                          ),
+                        ),
+                      onChanged: (value) async {
+                        if (value == '__new__') {
+                          final newSupplier = await _showAddSupplierDialog();
+                          if (newSupplier != null && newSupplier.isNotEmpty) {
+                            setState(() {
+                              _suppliers.add(newSupplier);
+                              _suppliers.sort();
+                              _selectedSupplier = newSupplier;
+                            });
+                          }
+                        } else {
+                          setState(() {
+                            _selectedSupplier = value;
+                          });
+                        }
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please select a supplier';
+                        }
+                        return null;
+                      },
+                    ),
 
               const SizedBox(height: 24),
 

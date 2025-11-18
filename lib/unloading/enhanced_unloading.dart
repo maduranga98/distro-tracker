@@ -300,8 +300,9 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
   // Expenses
   final List<Map<String, dynamic>> _expenses = [];
 
-  // Returns and Damages
+  // Returns and Damages (using cases and pieces)
   final Map<String, Map<String, int>> _itemAdjustments = {};
+  final Map<String, int> _itemUnitsPerCase = {};
 
   bool _isLoading = false;
 
@@ -317,9 +318,16 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
       final itemMap = item as Map<String, dynamic>;
       final itemId = itemMap['itemId'] ?? '';
       _itemAdjustments[itemId] = {
+        'returnsCases': 0,
+        'returnsPieces': 0,
         'returns': 0,
+        'damagedCases': 0,
+        'damagedPieces': 0,
         'damaged': 0,
       };
+      // Store unitsPerCase for calculations
+      final unitsPerCase = (itemMap['unitsPerCase'] as int?) ?? 1;
+      _itemUnitsPerCase[itemId] = unitsPerCase > 0 ? unitsPerCase : 1;
     }
   }
 
@@ -522,6 +530,7 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
               final itemMap = item as Map<String, dynamic>;
               final itemId = itemMap['itemId'] ?? '';
               final loadingQty = (itemMap['loadingQuantity'] as int?) ?? 0;
+              final unitsPerCase = _itemUnitsPerCase[itemId] ?? 1;
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -543,63 +552,201 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Loaded: $loadingQty units',
+                      'Loaded: $loadingQty units ($unitsPerCase pcs/case)',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            initialValue: _itemAdjustments[itemId]!['returns'].toString(),
-                            decoration: const InputDecoration(
-                              labelText: 'Returns',
-                              border: OutlineInputBorder(),
-                              isDense: true,
-                              prefixIcon: Icon(Icons.keyboard_return, size: 18),
+
+                    // Returns Section
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Returns',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blue[900],
                             ),
-                            keyboardType: TextInputType.number,
-                            onChanged: (value) {
-                              setState(() {
-                                _itemAdjustments[itemId]!['returns'] = int.tryParse(value) ?? 0;
-                              });
-                            },
-                            validator: (value) {
-                              final val = int.tryParse(value ?? '0') ?? 0;
-                              if (val < 0) return 'Cannot be negative';
-                              if (val > loadingQty) return 'Cannot exceed loaded qty';
-                              return null;
-                            },
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextFormField(
-                            initialValue: _itemAdjustments[itemId]!['damaged'].toString(),
-                            decoration: const InputDecoration(
-                              labelText: 'Damaged',
-                              border: OutlineInputBorder(),
-                              isDense: true,
-                              prefixIcon: Icon(Icons.warning, size: 18),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  initialValue: _itemAdjustments[itemId]!['returnsCases'].toString(),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Cases',
+                                    border: OutlineInputBorder(),
+                                    isDense: true,
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _itemAdjustments[itemId]!['returnsCases'] = int.tryParse(value) ?? 0;
+                                      _itemAdjustments[itemId]!['returns'] =
+                                        (_itemAdjustments[itemId]!['returnsCases']! * unitsPerCase) +
+                                        _itemAdjustments[itemId]!['returnsPieces']!;
+                                    });
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextFormField(
+                                  initialValue: _itemAdjustments[itemId]!['returnsPieces'].toString(),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Pieces',
+                                    border: OutlineInputBorder(),
+                                    isDense: true,
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _itemAdjustments[itemId]!['returnsPieces'] = int.tryParse(value) ?? 0;
+                                      _itemAdjustments[itemId]!['returns'] =
+                                        (_itemAdjustments[itemId]!['returnsCases']! * unitsPerCase) +
+                                        _itemAdjustments[itemId]!['returnsPieces']!;
+                                    });
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[100],
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'Total',
+                                      style: TextStyle(fontSize: 9, color: Colors.grey[700]),
+                                    ),
+                                    Text(
+                                      '${_itemAdjustments[itemId]!['returns']}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blue[900],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Damaged Section
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[50],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Damaged',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.orange[900],
                             ),
-                            keyboardType: TextInputType.number,
-                            onChanged: (value) {
-                              setState(() {
-                                _itemAdjustments[itemId]!['damaged'] = int.tryParse(value) ?? 0;
-                              });
-                            },
-                            validator: (value) {
-                              final val = int.tryParse(value ?? '0') ?? 0;
-                              if (val < 0) return 'Cannot be negative';
-                              if (val > loadingQty) return 'Cannot exceed loaded qty';
-                              return null;
-                            },
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  initialValue: _itemAdjustments[itemId]!['damagedCases'].toString(),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Cases',
+                                    border: OutlineInputBorder(),
+                                    isDense: true,
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _itemAdjustments[itemId]!['damagedCases'] = int.tryParse(value) ?? 0;
+                                      _itemAdjustments[itemId]!['damaged'] =
+                                        (_itemAdjustments[itemId]!['damagedCases']! * unitsPerCase) +
+                                        _itemAdjustments[itemId]!['damagedPieces']!;
+                                    });
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextFormField(
+                                  initialValue: _itemAdjustments[itemId]!['damagedPieces'].toString(),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Pieces',
+                                    border: OutlineInputBorder(),
+                                    isDense: true,
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _itemAdjustments[itemId]!['damagedPieces'] = int.tryParse(value) ?? 0;
+                                      _itemAdjustments[itemId]!['damaged'] =
+                                        (_itemAdjustments[itemId]!['damagedCases']! * unitsPerCase) +
+                                        _itemAdjustments[itemId]!['damagedPieces']!;
+                                    });
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[200],
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'Total',
+                                      style: TextStyle(fontSize: 9, color: Colors.grey[700]),
+                                    ),
+                                    Text(
+                                      '${_itemAdjustments[itemId]!['damaged']}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange[900],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Container(
@@ -1024,6 +1171,7 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
                     items: const [
                       DropdownMenuItem(value: 'fuel', child: Text('Fuel')),
                       DropdownMenuItem(value: 'meals', child: Text('Meals')),
+                      DropdownMenuItem(value: 'salary', child: Text('Salary')),
                       DropdownMenuItem(value: 'repairs', child: Text('Repairs')),
                       DropdownMenuItem(value: 'tolls', child: Text('Tolls')),
                       DropdownMenuItem(value: 'other', child: Text('Other')),
