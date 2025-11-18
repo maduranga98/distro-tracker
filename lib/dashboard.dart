@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:distro_tracker_flutter/setup/distributions.dart';
 import 'package:distro_tracker_flutter/setup/vehicles.dart';
 import 'package:distro_tracker_flutter/loading/loadingUi.dart';
+import 'package:distro_tracker_flutter/loading/add_stock.dart';
+import 'package:distro_tracker_flutter/loading/add_items.dart';
+import 'package:distro_tracker_flutter/loading/manage_items.dart';
+import 'package:distro_tracker_flutter/loading/stock_viewer.dart';
+import 'package:distro_tracker_flutter/loading/price_history.dart';
+import 'package:distro_tracker_flutter/unloading/routes.dart';
 import 'package:distro_tracker_flutter/unloading/enhanced_unloading.dart';
 import 'package:distro_tracker_flutter/expenses/expenses.dart';
 import 'package:distro_tracker_flutter/payments/payments.dart';
@@ -92,25 +98,151 @@ class Dashboard extends StatelessWidget {
               ],
             ),
 
+            const SizedBox(height: 12),
+
+            _buildDashboardCard(
+              context,
+              title: 'Routes',
+              subtitle: 'Add & manage delivery routes',
+              icon: Icons.route,
+              color: Colors.blueGrey,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RoutesCreation(),
+                  ),
+                );
+              },
+            ),
+
             const SizedBox(height: 24),
 
             // Inventory Management Section
             _buildSectionTitle('Inventory Management'),
             const SizedBox(height: 12),
-            _buildDashboardCard(
-              context,
-              title: 'Invoices',
-              subtitle: 'Manage stock invoices',
-              icon: Icons.receipt_long,
-              color: Colors.blue,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const InvoiceList(),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDashboardCard(
+                    context,
+                    title: 'Add Stock',
+                    subtitle: 'Record new stock entry',
+                    icon: Icons.add_box_outlined,
+                    color: Colors.green,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AddStock(),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDashboardCard(
+                    context,
+                    title: 'Add Items',
+                    subtitle: 'Add new product items',
+                    icon: Icons.inventory_2_outlined,
+                    color: Colors.blue,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AddItems(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDashboardCard(
+                    context,
+                    title: 'Manage Items',
+                    subtitle: 'Edit & delete items',
+                    icon: Icons.edit_note,
+                    color: Colors.orange,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ManageItems(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDashboardCard(
+                    context,
+                    title: 'View Stock',
+                    subtitle: 'Check current stock',
+                    icon: Icons.visibility,
+                    color: Colors.purple,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const StockViewer(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDashboardCard(
+                    context,
+                    title: 'Price History',
+                    subtitle: 'View price changes',
+                    icon: Icons.history,
+                    color: Colors.teal,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PriceHistory(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDashboardCard(
+                    context,
+                    title: 'Invoices',
+                    subtitle: 'Manage stock invoices',
+                    icon: Icons.receipt_long,
+                    color: Colors.indigo,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const InvoiceList(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 24),
@@ -210,7 +342,7 @@ class Dashboard extends StatelessWidget {
               title: 'Daily Reports',
               subtitle: 'View accounts & sales reports',
               icon: Icons.assessment,
-              color: Colors.indigo,
+              color: Colors.deepPurple,
               onTap: () {
                 Navigator.push(
                   context,
