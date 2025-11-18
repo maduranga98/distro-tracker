@@ -14,6 +14,7 @@ import 'package:distro_tracker_flutter/payments/payments.dart';
 import 'package:distro_tracker_flutter/reports/daily_reports.dart';
 import 'package:distro_tracker_flutter/reports/daily_unloading_details.dart';
 import 'package:distro_tracker_flutter/invoices/invoice_list.dart';
+import 'package:distro_tracker_flutter/analytics/business_analytics_dashboard.dart';
 
 class Dashboard extends StatelessWidget {
   const Dashboard({super.key});
@@ -313,6 +314,24 @@ class Dashboard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+
+            const SizedBox(height: 12),
+
+            _buildDashboardCard(
+              context,
+              title: 'Business Analytics',
+              subtitle: 'Performance insights & recommendations',
+              icon: Icons.analytics,
+              color: Colors.teal,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BusinessAnalyticsDashboard(),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 24),
