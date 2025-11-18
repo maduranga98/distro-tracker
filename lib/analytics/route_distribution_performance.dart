@@ -90,13 +90,13 @@ class _RouteDistributionPerformanceScreenState
       }
 
       routesMap[routeId]!['totalRevenue'] =
-          (routesMap[routeId]!['totalRevenue'] as double) + totalValue;
+          ((routesMap[routeId]!['totalRevenue'] as num).toDouble()) + totalValue;
       routesMap[routeId]!['totalExpenses'] =
-          (routesMap[routeId]!['totalExpenses'] as double) + totalExpenses;
+          ((routesMap[routeId]!['totalExpenses'] as num).toDouble()) + totalExpenses;
       routesMap[routeId]!['totalQuantity'] =
-          (routesMap[routeId]!['totalQuantity'] as int) + totalQuantity;
+          ((routesMap[routeId]!['totalQuantity'] as num).toInt()) + totalQuantity;
       routesMap[routeId]!['tripCount'] =
-          (routesMap[routeId]!['tripCount'] as int) + 1;
+          ((routesMap[routeId]!['tripCount'] as num).toInt()) + 1;
 
       for (var item in items) {
         final itemId = (item as Map<String, dynamic>)['itemId'];
@@ -126,10 +126,10 @@ class _RouteDistributionPerformanceScreenState
         }
       }
 
-      final totalRevenue = (data['totalRevenue'] as double);
-      final totalExpenses = (data['totalExpenses'] as double);
+      final totalRevenue = (data['totalRevenue'] as num).toDouble();
+      final totalExpenses = (data['totalExpenses'] as num).toDouble();
       final netProfit = totalRevenue - totalExpenses;
-      final tripCount = (data['tripCount'] as int);
+      final tripCount = (data['tripCount'] as num).toInt();
       final avgRevenuePerTrip = tripCount > 0 ? totalRevenue / tripCount : 0.0;
       final profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0.0;
 
@@ -148,7 +148,7 @@ class _RouteDistributionPerformanceScreenState
       });
     }
 
-    routesList.sort((a, b) => (b['totalRevenue'] as double).compareTo(a['totalRevenue'] as double));
+    routesList.sort((a, b) => ((b['totalRevenue'] as num).toDouble()).compareTo((a['totalRevenue'] as num).toDouble()));
     _routePerformance = routesList;
   }
 
@@ -179,13 +179,13 @@ class _RouteDistributionPerformanceScreenState
       }
 
       distributionsMap[distributionId]!['totalRevenue'] =
-          (distributionsMap[distributionId]!['totalRevenue'] as double) + totalValue;
+          ((distributionsMap[distributionId]!['totalRevenue'] as num).toDouble()) + totalValue;
       distributionsMap[distributionId]!['totalExpenses'] =
-          (distributionsMap[distributionId]!['totalExpenses'] as double) + totalExpenses;
+          ((distributionsMap[distributionId]!['totalExpenses'] as num).toDouble()) + totalExpenses;
       distributionsMap[distributionId]!['totalQuantity'] =
-          (distributionsMap[distributionId]!['totalQuantity'] as int) + totalQuantity;
+          ((distributionsMap[distributionId]!['totalQuantity'] as num).toInt()) + totalQuantity;
       distributionsMap[distributionId]!['deliveryCount'] =
-          (distributionsMap[distributionId]!['deliveryCount'] as int) + 1;
+          ((distributionsMap[distributionId]!['deliveryCount'] as num).toInt()) + 1;
     }
 
     // Load distribution details
@@ -208,10 +208,10 @@ class _RouteDistributionPerformanceScreenState
         }
       }
 
-      final totalRevenue = (data['totalRevenue'] as double);
-      final totalExpenses = (data['totalExpenses'] as double);
+      final totalRevenue = (data['totalRevenue'] as num).toDouble();
+      final totalExpenses = (data['totalExpenses'] as num).toDouble();
       final netProfit = totalRevenue - totalExpenses;
-      final deliveryCount = (data['deliveryCount'] as int);
+      final deliveryCount = (data['deliveryCount'] as num).toInt();
       final avgRevenuePerDelivery = deliveryCount > 0 ? totalRevenue / deliveryCount : 0.0;
       final profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0.0;
 
@@ -229,7 +229,7 @@ class _RouteDistributionPerformanceScreenState
     }
 
     distributionsList.sort((a, b) =>
-        (b['totalRevenue'] as double).compareTo(a['totalRevenue'] as double));
+        ((b['totalRevenue'] as num).toDouble()).compareTo((a['totalRevenue'] as num).toDouble()));
     _distributionPerformance = distributionsList;
   }
 
@@ -283,10 +283,10 @@ class _RouteDistributionPerformanceScreenState
     }
 
     final totalRevenue = _routePerformance.fold<double>(
-      0, (sum, r) => sum + (r['totalRevenue'] as double),
+      0, (sum, r) => sum + ((r['totalRevenue'] as num).toDouble()),
     );
     final totalProfit = _routePerformance.fold<double>(
-      0, (sum, r) => sum + (r['netProfit'] as double),
+      0, (sum, r) => sum + ((r['netProfit'] as num).toDouble()),
     );
 
     return Column(
@@ -323,10 +323,10 @@ class _RouteDistributionPerformanceScreenState
     }
 
     final totalRevenue = _distributionPerformance.fold<double>(
-      0, (sum, d) => sum + (d['totalRevenue'] as double),
+      0, (sum, d) => sum + ((d['totalRevenue'] as num).toDouble()),
     );
     final totalProfit = _distributionPerformance.fold<double>(
-      0, (sum, d) => sum + (d['netProfit'] as double),
+      0, (sum, d) => sum + ((d['netProfit'] as num).toDouble()),
     );
 
     return Column(
@@ -411,13 +411,13 @@ class _RouteDistributionPerformanceScreenState
   }
 
   Widget _buildRouteCard(Map<String, dynamic> route, int rank) {
-    final totalRevenue = (route['totalRevenue'] as double);
-    final totalExpenses = (route['totalExpenses'] as double);
-    final netProfit = (route['netProfit'] as double);
-    final tripCount = (route['tripCount'] as int);
-    final avgRevenuePerTrip = (route['avgRevenuePerTrip'] as double);
-    final profitMargin = (route['profitMargin'] as double);
-    final uniqueItems = (route['uniqueItems'] as int);
+    final totalRevenue = (route['totalRevenue'] as num).toDouble();
+    final totalExpenses = (route['totalExpenses'] as num).toDouble();
+    final netProfit = (route['netProfit'] as num).toDouble();
+    final tripCount = (route['tripCount'] as num).toInt();
+    final avgRevenuePerTrip = (route['avgRevenuePerTrip'] as num).toDouble();
+    final profitMargin = (route['profitMargin'] as num).toDouble();
+    final uniqueItems = (route['uniqueItems'] as num).toInt();
 
     final isTop = rank <= 3;
 
@@ -562,12 +562,12 @@ class _RouteDistributionPerformanceScreenState
   }
 
   Widget _buildDistributionCard(Map<String, dynamic> distribution, int rank) {
-    final totalRevenue = (distribution['totalRevenue'] as double);
-    final totalExpenses = (distribution['totalExpenses'] as double);
-    final netProfit = (distribution['netProfit'] as double);
-    final deliveryCount = (distribution['deliveryCount'] as int);
-    final avgRevenuePerDelivery = (distribution['avgRevenuePerDelivery'] as double);
-    final profitMargin = (distribution['profitMargin'] as double);
+    final totalRevenue = (distribution['totalRevenue'] as num).toDouble();
+    final totalExpenses = (distribution['totalExpenses'] as num).toDouble();
+    final netProfit = (distribution['netProfit'] as num).toDouble();
+    final deliveryCount = (distribution['deliveryCount'] as num).toInt();
+    final avgRevenuePerDelivery = (distribution['avgRevenuePerDelivery'] as num).toDouble();
+    final profitMargin = (distribution['profitMargin'] as num).toDouble();
 
     final isTop = rank <= 3;
 

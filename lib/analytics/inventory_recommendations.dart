@@ -87,13 +87,13 @@ class _InventoryRecommendationsScreenState
           }
 
           salesData[itemId]!['totalSold'] =
-              (salesData[itemId]!['totalSold'] as num) + quantity;
+              ((salesData[itemId]!['totalSold'] as num).toDouble()) + quantity.toDouble();
           salesData[itemId]!['totalReturns'] =
-              (salesData[itemId]!['totalReturns'] as num) + returns;
+              ((salesData[itemId]!['totalReturns'] as num).toDouble()) + returns.toDouble();
           salesData[itemId]!['totalDamaged'] =
-              (salesData[itemId]!['totalDamaged'] as num) + damaged;
+              ((salesData[itemId]!['totalDamaged'] as num).toDouble()) + damaged.toDouble();
           salesData[itemId]!['salesCount'] =
-              (salesData[itemId]!['salesCount'] as int) + 1;
+              ((salesData[itemId]!['salesCount'] as num).toInt()) + 1;
         }
       }
 
@@ -170,8 +170,8 @@ class _InventoryRecommendationsScreenState
         final priorityCompare = priorityOrder[a['priority']]!
             .compareTo(priorityOrder[b['priority']]!);
         if (priorityCompare != 0) return priorityCompare;
-        return (a['daysOfStock'] as double)
-            .compareTo(b['daysOfStock'] as double);
+        return ((a['daysOfStock'] as num).toDouble())
+            .compareTo((b['daysOfStock'] as num).toDouble());
       });
 
       setState(() {
@@ -345,10 +345,10 @@ class _InventoryRecommendationsScreenState
 
   Widget _buildRecommendationCard(Map<String, dynamic> item) {
     final priority = item['priority'] as String;
-    final currentStock = item['currentStock'] as int;
-    final avgDailySales = (item['avgDailySales'] as double);
-    final daysOfStock = (item['daysOfStock'] as double);
-    final recommendedOrder = item['recommendedOrder'] as int;
+    final currentStock = (item['currentStock'] as num).toInt();
+    final avgDailySales = (item['avgDailySales'] as num).toDouble();
+    final daysOfStock = (item['daysOfStock'] as num).toDouble();
+    final recommendedOrder = (item['recommendedOrder'] as num).toInt();
     final unitsPerCase = (item['unitsPerCase'] as num).toInt();
     final distributorPrice = (item['distributorPrice'] as num).toDouble();
 
