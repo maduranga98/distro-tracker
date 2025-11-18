@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 class AddStock extends StatefulWidget {
   const AddStock({super.key});
@@ -19,6 +20,10 @@ class _AddStockState extends State<AddStock> {
   final TextEditingController notesController = TextEditingController();
   final TextEditingController purchasePriceController = TextEditingController();
   final TextEditingController sellingPriceController = TextEditingController();
+  final TextEditingController _casesController = TextEditingController(text: '0');
+  final TextEditingController _piecesController = TextEditingController(text: '0');
+  final TextEditingController _focCasesController = TextEditingController(text: '0');
+  final TextEditingController _focPiecesController = TextEditingController(text: '0');
 
   // State variables
   String? _selectedSupplier;
@@ -38,12 +43,36 @@ class _AddStockState extends State<AddStock> {
     _loadInitialData();
   }
 
+  void _calculateQuantity() {
+    if (_selectedItemData != null) {
+      final unitsPerCase = (_selectedItemData!['unitsPerCase'] ?? 1).toInt();
+      final cases = int.tryParse(_casesController.text) ?? 0;
+      final pieces = int.tryParse(_piecesController.text) ?? 0;
+      quantityController.text = ((cases * unitsPerCase) + pieces).toString();
+    }
+  }
+
+  void _calculateFOC() {
+    if (_selectedItemData != null) {
+      final unitsPerCase = (_selectedItemData!['unitsPerCase'] ?? 1).toInt();
+      final focCases = int.tryParse(_focCasesController.text) ?? 0;
+      final focPieces = int.tryParse(_focPiecesController.text) ?? 0;
+      focUnitsController.text = ((focCases * unitsPerCase) + focPieces).toString();
+    }
+  }
+
   @override
   void dispose() {
     quantityController.dispose();
     focUnitsController.dispose();
     batchNumberController.dispose();
     notesController.dispose();
+    purchasePriceController.dispose();
+    sellingPriceController.dispose();
+    _casesController.dispose();
+    _piecesController.dispose();
+    _focCasesController.dispose();
+    _focPiecesController.dispose();
     super.dispose();
   }
 
@@ -112,7 +141,12 @@ class _AddStockState extends State<AddStock> {
 
       if (mounted) {
         setState(() {
-          _allItems = items;
+          _allItems = items.map((item) {
+            return {
+              ...item,
+              'unitsPerCase': (item['unitsPerCase'] ?? 1).toInt(),
+            };
+          }).toList();
           _isLoadingItems = false;
         });
       }
@@ -251,30 +285,186 @@ class _AddStockState extends State<AddStock> {
               // Stock Information Section
               _buildSectionHeader("Stock Information"),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildTextField(
-                      controller: quantityController,
-                      label: "Quantity",
-                      hint: "Enter quantity",
-                      icon: Icons.inventory_outlined,
-                      keyboardType: TextInputType.number,
-                      isRequired: true,
-                    ),
+              if (_selectedItemData != null) ...[
+                // Cases and Pieces Section
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue[200]!),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildTextField(
-                      controller: focUnitsController,
-                      label: "FOC Units",
-                      hint: "Free units",
-                      icon: Icons.card_giftcard_outlined,
-                      keyboardType: TextInputType.number,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Quantity (${_selectedItemData!['unitsPerCase'] ?? 1} pcs per case)',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _CasePieceField(
+                              label: "Cases",
+                              hint: "Enter cases",
+                              onChanged: (value) {
+                                setState(() {
+                                  _calculateQuantity();
+                                });
+                              },
+                              controller: _casesController,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _CasePieceField(
+                              label: "Pieces",
+                              hint: "Enter pieces",
+                              onChanged: (value) {
+                                setState(() {
+                                  _calculateQuantity();
+                                });
+                              },
+                              controller: _piecesController,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Total Pieces:',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              quantityController.text.isEmpty ? '0' : quantityController.text,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue[900],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Free of Cost (FOC)',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _CasePieceField(
+                              label: "FOC Cases",
+                              hint: "Enter FOC cases",
+                              onChanged: (value) {
+                                setState(() {
+                                  _calculateFOC();
+                                });
+                              },
+                              controller: _focCasesController,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _CasePieceField(
+                              label: "FOC Pieces",
+                              hint: "Enter FOC pieces",
+                              onChanged: (value) {
+                                setState(() {
+                                  _calculateFOC();
+                                });
+                              },
+                              controller: _focPiecesController,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Total FOC Pieces:',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              focUnitsController.text.isEmpty ? '0' : focUnitsController.text,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange[900],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        controller: quantityController,
+                        label: "Quantity",
+                        hint: "Enter quantity",
+                        icon: Icons.inventory_outlined,
+                        keyboardType: TextInputType.number,
+                        isRequired: true,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildTextField(
+                        controller: focUnitsController,
+                        label: "FOC Units",
+                        hint: "Free units",
+                        icon: Icons.card_giftcard_outlined,
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
+                ),
               const SizedBox(height: 16),
               _buildTextField(
                 controller: batchNumberController,
@@ -680,6 +870,10 @@ class _AddStockState extends State<AddStock> {
     notesController.clear();
     purchasePriceController.clear();
     sellingPriceController.clear();
+    _casesController.text = '0';
+    _piecesController.text = '0';
+    _focCasesController.text = '0';
+    _focPiecesController.text = '0';
 
     setState(() {
       _selectedSupplier = null;
@@ -879,6 +1073,39 @@ class _AddStockState extends State<AddStock> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+    );
+  }
+}
+
+// Helper widget for cases and pieces input
+class _CasePieceField extends StatelessWidget {
+  final String label;
+  final String hint;
+  final Function(String) onChanged;
+  final TextEditingController controller;
+
+  const _CasePieceField({
+    required this.label,
+    required this.hint,
+    required this.onChanged,
+    required this.controller,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        border: const OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      ),
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      onChanged: onChanged,
     );
   }
 }
