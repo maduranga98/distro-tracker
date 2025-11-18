@@ -84,17 +84,17 @@ class _ItemPerformanceScreenState extends State<ItemPerformanceScreen> {
 
           if (itemsMap.containsKey(itemId)) {
             itemsMap[itemId]!['totalQuantity'] =
-                (itemsMap[itemId]!['totalQuantity'] as num) + quantity;
+                ((itemsMap[itemId]!['totalQuantity'] as num).toDouble()) + quantity.toDouble();
             itemsMap[itemId]!['totalValue'] =
-                (itemsMap[itemId]!['totalValue'] as num) + value;
+                ((itemsMap[itemId]!['totalValue'] as num).toDouble()) + value;
             itemsMap[itemId]!['totalFreeIssues'] =
-                (itemsMap[itemId]!['totalFreeIssues'] as num) + freeIssues;
+                ((itemsMap[itemId]!['totalFreeIssues'] as num).toDouble()) + freeIssues.toDouble();
             itemsMap[itemId]!['totalReturns'] =
-                (itemsMap[itemId]!['totalReturns'] as num) + returns;
+                ((itemsMap[itemId]!['totalReturns'] as num).toDouble()) + returns.toDouble();
             itemsMap[itemId]!['totalDamaged'] =
-                (itemsMap[itemId]!['totalDamaged'] as num) + damaged;
+                ((itemsMap[itemId]!['totalDamaged'] as num).toDouble()) + damaged.toDouble();
             itemsMap[itemId]!['transactionCount'] =
-                (itemsMap[itemId]!['transactionCount'] as int) + 1;
+                ((itemsMap[itemId]!['transactionCount'] as num).toInt()) + 1;
           } else {
             itemsMap[itemId] = {
               'itemId': itemId,
@@ -113,7 +113,7 @@ class _ItemPerformanceScreenState extends State<ItemPerformanceScreen> {
 
       // Convert to list and sort by value
       final itemsList = itemsMap.values.toList();
-      itemsList.sort((a, b) => (b['totalValue'] as num).compareTo(a['totalValue'] as num));
+      itemsList.sort((a, b) => ((b['totalValue'] as num).toDouble()).compareTo((a['totalValue'] as num).toDouble()));
 
       setState(() {
         _itemPerformanceData = itemsList;
@@ -319,7 +319,7 @@ class _ItemPerformanceScreenState extends State<ItemPerformanceScreen> {
     final totalFreeIssues = (item['totalFreeIssues'] as num).toInt();
     final totalReturns = (item['totalReturns'] as num).toInt();
     final totalDamaged = (item['totalDamaged'] as num).toInt();
-    final transactionCount = (item['transactionCount'] as int);
+    final transactionCount = (item['transactionCount'] as num).toInt();
     final avgPerTransaction = transactionCount > 0 ? totalValue / transactionCount : 0;
 
     Color rankColor = rank <= 3 ? Colors.amber : Colors.grey;

@@ -162,14 +162,14 @@ class _BusinessAnalyticsDashboardState extends State<BusinessAnalyticsDashboard>
         }
 
         itemsMap[itemId]!['totalQuantity'] =
-            (itemsMap[itemId]!['totalQuantity'] as num) + quantity;
+            ((itemsMap[itemId]!['totalQuantity'] as num).toDouble()) + quantity.toDouble();
         itemsMap[itemId]!['totalValue'] =
-            (itemsMap[itemId]!['totalValue'] as num) + value;
+            ((itemsMap[itemId]!['totalValue'] as num).toDouble()) + value;
       }
     }
 
     final itemsList = itemsMap.values.toList();
-    itemsList.sort((a, b) => (b['totalValue'] as num).compareTo(a['totalValue'] as num));
+    itemsList.sort((a, b) => ((b['totalValue'] as num).toDouble()).compareTo((a['totalValue'] as num).toDouble()));
 
     _topSellingItems = itemsList.take(5).toList();
   }
@@ -226,7 +226,7 @@ class _BusinessAnalyticsDashboardState extends State<BusinessAnalyticsDashboard>
     }
 
     // Sort by lowest sales
-    slowItems.sort((a, b) => (a['totalSold'] as int).compareTo(b['totalSold'] as int));
+    slowItems.sort((a, b) => ((a['totalSold'] as num).toInt()).compareTo((b['totalSold'] as num).toInt()));
 
     _slowMovingItems = slowItems.take(5).toList();
   }
