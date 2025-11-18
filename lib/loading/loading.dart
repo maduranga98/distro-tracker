@@ -23,9 +23,11 @@ class _LoadingScreenState extends State<LoadingScreen> {
   // New fields for distribution/vehicle/date/weather
   String? _selectedDistributionId;
   String? _selectedVehicleId;
+  String? _selectedRouteId;
   DateTime _selectedDate = DateTime.now();
   String _morningWeather = 'Sunny';
   List<Map<String, dynamic>> _vehicles = [];
+  List<Map<String, dynamic>> _routes = [];
   final List<String> _weatherOptions = ['Sunny', 'Cloudy', 'Rainy', 'Stormy'];
 
   @override
@@ -91,6 +93,45 @@ class _LoadingScreenState extends State<LoadingScreen> {
       });
     } catch (e) {
       _showErrorSnackBar('Error loading vehicles: ${e.toString()}');
+    }
+  }
+
+  /// Loads routes for selected distribution
+  Future<void> _loadRoutes(String distributionId) async {
+    try {
+      // First get the distribution to get route IDs
+      final distributionDoc = await _firestore
+          .collection('distributions')
+          .doc(distributionId)
+          .get();
+
+      if (distributionDoc.exists) {
+        final data = distributionDoc.data();
+        final routeIds = List<String>.from(data?['routeIds'] ?? []);
+
+        if (routeIds.isNotEmpty) {
+          // Load routes based on IDs
+          final routesSnapshot = await _firestore
+              .collection('routes')
+              .where(FieldPath.documentId, whereIn: routeIds)
+              .where('status', isEqualTo: 'active')
+              .get();
+
+          setState(() {
+            _routes = routesSnapshot.docs
+                .map((doc) => {'id': doc.id, ...doc.data()})
+                .toList();
+            _selectedRouteId = null;
+          });
+        } else {
+          setState(() {
+            _routes = [];
+            _selectedRouteId = null;
+          });
+        }
+      }
+    } catch (e) {
+      _showErrorSnackBar('Error loading routes: ${e.toString()}');
     }
   }
 
@@ -195,6 +236,11 @@ class _LoadingScreenState extends State<LoadingScreen> {
       return;
     }
 
+    if (_selectedRouteId == null) {
+      _showErrorSnackBar('Please select a route');
+      return;
+    }
+
     if (_selectedVehicleId == null) {
       _showErrorSnackBar('Please select a vehicle');
       return;
@@ -212,6 +258,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
     try {
       final loadingData = {
         'distributionId': _selectedDistributionId,
+        'routeId': _selectedRouteId,
         'vehicleId': _selectedVehicleId,
         'loadingDate': Timestamp.fromDate(_selectedDate),
         'morningWeather': _morningWeather,
@@ -263,9 +310,11 @@ class _LoadingScreenState extends State<LoadingScreen> {
       setState(() {
         _selectedItems.clear();
         _selectedDistributionId = null;
+        _selectedRouteId = null;
         _selectedVehicleId = null;
         _selectedDate = DateTime.now();
         _vehicles.clear();
+        _routes.clear();
       });
 
       // Reload items to reflect updated stock
@@ -376,14 +425,16 @@ class _LoadingScreenState extends State<LoadingScreen> {
         // Stepper Header
         Container(
           color: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Row(
             children: [
-              _buildStepIndicator(0, 'Setup', Icons.settings),
+              _buildStepIndicator(0, 'Distribution', Icons.business),
               _buildStepConnector(),
-              _buildStepIndicator(1, 'Select Items', Icons.inventory_2),
+              _buildStepIndicator(1, 'Details', Icons.settings),
               _buildStepConnector(),
-              _buildStepIndicator(2, 'Review', Icons.check_circle),
+              _buildStepIndicator(2, 'Items', Icons.inventory_2),
+              _buildStepConnector(),
+              _buildStepIndicator(3, 'Review', Icons.check_circle),
             ],
           ),
         ),
@@ -394,13 +445,16 @@ class _LoadingScreenState extends State<LoadingScreen> {
           child: IndexedStack(
             index: _currentStep,
             children: [
-              // Step 0: Distribution/Vehicle/Date Selection
-              _buildSetupStep(),
+              // Step 0: Distribution & Route Selection
+              _buildDistributionStep(),
 
-              // Step 1: Items Selection
+              // Step 1: Vehicle, Date & Weather
+              _buildDetailsStep(),
+
+              // Step 2: Items Selection
               _buildItemsSelectionStep(),
 
-              // Step 2: Review & Save
+              // Step 3: Review & Save
               _buildReviewStep(),
             ],
           ),
@@ -444,7 +498,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
               Expanded(
                 flex: 2,
                 child: ElevatedButton.icon(
-                  onPressed: _currentStep == 2
+                  onPressed: _currentStep == 3
                       ? (_isSaving ? null : _saveLoading)
                       : _canProceedToNextStep()
                           ? () {
@@ -453,9 +507,9 @@ class _LoadingScreenState extends State<LoadingScreen> {
                               });
                             }
                           : null,
-                  icon: Icon(_currentStep == 2 ? Icons.save : Icons.arrow_forward),
+                  icon: Icon(_currentStep == 3 ? Icons.save : Icons.arrow_forward),
                   label: Text(
-                    _currentStep == 2
+                    _currentStep == 3
                         ? (_isSaving ? 'Saving...' : 'Save Loading')
                         : 'Next',
                     style: const TextStyle(
@@ -484,8 +538,10 @@ class _LoadingScreenState extends State<LoadingScreen> {
   bool _canProceedToNextStep() {
     switch (_currentStep) {
       case 0:
-        return _selectedDistributionId != null && _selectedVehicleId != null;
+        return _selectedDistributionId != null && _selectedRouteId != null;
       case 1:
+        return _selectedVehicleId != null;
+      case 2:
         return _selectedItems.isNotEmpty;
       default:
         return false;
@@ -542,10 +598,59 @@ class _LoadingScreenState extends State<LoadingScreen> {
     );
   }
 
-  Widget _buildSetupStep() {
+  Widget _buildDistributionStep() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: _buildSelectionCard(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Select Distribution & Route',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Choose the distribution center and delivery route for this loading',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildDistributionCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailsStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Loading Details',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Select vehicle, date and weather conditions',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildDetailsCard(),
+        ],
+      ),
     );
   }
 
@@ -646,13 +751,12 @@ class _LoadingScreenState extends State<LoadingScreen> {
     );
   }
 
-  Widget _buildSelectionCard() {
+  Widget _buildDistributionCard() {
     return Card(
-      margin: const EdgeInsets.all(16),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -664,17 +768,21 @@ class _LoadingScreenState extends State<LoadingScreen> {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
-                  return const CircularProgressIndicator();
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 final distributions = snapshot.data!.docs;
 
                 return DropdownButtonFormField<String>(
                   value: _selectedDistributionId,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Select Distribution *',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.business),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: const Icon(Icons.business),
+                    filled: true,
+                    fillColor: Colors.grey[50],
                   ),
                   items: distributions.map((doc) {
                     final data = doc.data() as Map<String, dynamic>;
@@ -686,8 +794,11 @@ class _LoadingScreenState extends State<LoadingScreen> {
                   onChanged: (value) {
                     setState(() {
                       _selectedDistributionId = value;
+                      _selectedRouteId = null;
+                      _routes = [];
                       if (value != null) {
                         _loadVehicles(value);
+                        _loadRoutes(value);
                       }
                     });
                   },
@@ -695,20 +806,111 @@ class _LoadingScreenState extends State<LoadingScreen> {
               },
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
+            // Route Dropdown
+            DropdownButtonFormField<String>(
+              value: _selectedRouteId,
+              decoration: InputDecoration(
+                labelText: 'Select Route *',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                prefixIcon: const Icon(Icons.route),
+                filled: true,
+                fillColor: Colors.grey[50],
+                helperText: _routes.isEmpty && _selectedDistributionId != null
+                    ? 'No routes assigned to this distribution'
+                    : null,
+                helperStyle: TextStyle(color: Colors.orange[700]),
+              ),
+              items: _routes.map((route) {
+                return DropdownMenuItem<String>(
+                  value: route['id'] as String?,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${route['routeCode']} - ${route['routeName']}',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        '${route['startLocation']} → ${route['endLocation']}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: _selectedDistributionId == null
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _selectedRouteId = value;
+                      });
+                    },
+            ),
+
+            if (_routes.isEmpty && _selectedDistributionId != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Please assign routes to this distribution first',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.orange[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailsCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             // Vehicle Dropdown
             DropdownButtonFormField<String>(
               value: _selectedVehicleId,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Select Vehicle *',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.local_shipping),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                prefixIcon: const Icon(Icons.local_shipping),
+                filled: true,
+                fillColor: Colors.grey[50],
               ),
               items: _vehicles.map((vehicle) {
                 return DropdownMenuItem<String>(
                   value: vehicle['id'] as String?,
-                  child: Text(vehicle['vehicleName'] ?? 'Unknown'),
+                  child: Text(
+                    '${vehicle['vehicleName']} (${vehicle['vehicleNumber'] ?? 'N/A'})',
+                  ),
                 );
               }).toList(),
               onChanged: _selectedDistributionId == null
@@ -720,15 +922,10 @@ class _LoadingScreenState extends State<LoadingScreen> {
                     },
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
             // Date Picker
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.calendar_today),
-              title: const Text('Loading Date'),
-              subtitle: Text(_formatDate(_selectedDate)),
-              trailing: const Icon(Icons.arrow_drop_down),
+            InkWell(
               onTap: () async {
                 final date = await showDatePicker(
                   context: context,
@@ -742,26 +939,74 @@ class _LoadingScreenState extends State<LoadingScreen> {
                   });
                 }
               },
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.grey[50],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Loading Date',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatDate(_selectedDate),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_drop_down),
+                  ],
+                ),
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
             // Weather Dropdown
             DropdownButtonFormField<String>(
               value: _morningWeather,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Morning Weather',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.wb_sunny),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                prefixIcon: const Icon(Icons.wb_sunny),
+                filled: true,
+                fillColor: Colors.grey[50],
               ),
               items: _weatherOptions.map((weather) {
                 return DropdownMenuItem(
                   value: weather,
-                  child: Text(weather),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _getWeatherIcon(weather),
+                        size: 20,
+                        color: _getWeatherColor(weather),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(weather),
+                    ],
+                  ),
                 );
               }).toList(),
               onChanged: (value) {
@@ -774,6 +1019,36 @@ class _LoadingScreenState extends State<LoadingScreen> {
         ),
       ),
     );
+  }
+
+  IconData _getWeatherIcon(String weather) {
+    switch (weather) {
+      case 'Sunny':
+        return Icons.wb_sunny;
+      case 'Cloudy':
+        return Icons.cloud;
+      case 'Rainy':
+        return Icons.water_drop;
+      case 'Stormy':
+        return Icons.thunderstorm;
+      default:
+        return Icons.wb_sunny;
+    }
+  }
+
+  Color _getWeatherColor(String weather) {
+    switch (weather) {
+      case 'Sunny':
+        return Colors.orange;
+      case 'Cloudy':
+        return Colors.grey;
+      case 'Rainy':
+        return Colors.blue;
+      case 'Stormy':
+        return Colors.purple;
+      default:
+        return Colors.orange;
+    }
   }
 
   Widget _buildSummaryCard() {
