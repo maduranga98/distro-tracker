@@ -291,6 +291,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
                 'brand': item['brand'],
                 'category': item['category'],
                 'unitType': item['unitType'],
+                'unitsPerCase': item['unitsPerCase'] ?? 1,
                 'loadingQuantity': item['loadingQuantity'],
                 'freeIssues': item['freeIssues'] ?? 0,
                 'distributorPrice': item['distributorPrice'],
