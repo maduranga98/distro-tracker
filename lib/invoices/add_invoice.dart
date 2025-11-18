@@ -272,14 +272,17 @@ class _AddInvoiceState extends State<AddInvoice> {
 
     try {
       // Save invoice to Firestore
+      final distributionName = _distributions.firstWhere(
+        (d) => d['id'] == _selectedDistribution,
+        orElse: () => {'name': 'Unknown'},
+      )['name'];
+
       final invoiceRef = await FirebaseFirestore.instance
           .collection('invoices')
           .add({
             'invoiceNumber': _invoiceNumberController.text,
             'distributionId': _selectedDistribution,
-            'distributionName': _distributions.firstWhere(
-              (d) => d['id'] == _selectedDistribution,
-            )['name'],
+            'distributionName': distributionName,
             'supplier': _selectedSupplier,
             'invoiceDate': Timestamp.fromDate(_invoiceDate),
             'items': _invoiceItems,
@@ -317,6 +320,11 @@ class _AddInvoiceState extends State<AddInvoice> {
 
   Future<void> _updateStock(Map<String, dynamic> item, String invoiceId) async {
     try {
+      final distributionName = _distributions.firstWhere(
+        (d) => d['id'] == _selectedDistribution,
+        orElse: () => {'name': 'Unknown'},
+      )['name'];
+
       // Add stock entry for this distribution
       await FirebaseFirestore.instance.collection('stock').add({
         'itemId': item['itemId'],
@@ -325,9 +333,7 @@ class _AddInvoiceState extends State<AddInvoice> {
         'brand': item['brand'],
         'category': item['category'],
         'distributionId': _selectedDistribution,
-        'distributionName': _distributions.firstWhere(
-          (d) => d['id'] == _selectedDistribution,
-        )['name'],
+        'distributionName': distributionName,
         'supplier': _selectedSupplier,
         'quantity': item['quantity'],
         'focUnits': item['focQuantity'] ?? 0,
@@ -523,14 +529,18 @@ class _AddInvoiceState extends State<AddInvoice> {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-              color: isActive ? Colors.blue[600] : Colors.grey[600],
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                color: isActive ? Colors.blue[600] : Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -849,8 +859,10 @@ class _AddInvoiceState extends State<AddInvoice> {
                   _buildDetailRow('Invoice Number', _invoiceNumberController.text),
                   _buildDetailRow(
                     'Distribution',
-                    _distributions
-                        .firstWhere((d) => d['id'] == _selectedDistribution)['name'],
+                    _distributions.firstWhere(
+                      (d) => d['id'] == _selectedDistribution,
+                      orElse: () => {'name': 'Unknown'},
+                    )['name'] as String,
                   ),
                   _buildDetailRow('Supplier', _selectedSupplier ?? ''),
                   _buildDetailRow(
@@ -910,13 +922,20 @@ class _AddInvoiceState extends State<AddInvoice> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Qty: ${item['cases']}C + ${item['pieces']}P = ${item['quantity']}',
-                            style: const TextStyle(fontSize: 12),
+                          Flexible(
+                            child: Text(
+                              'Qty: ${item['cases']}C + ${item['pieces']}P = ${item['quantity']}',
+                              style: const TextStyle(fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          Text(
-                            'FOC: ${item['focCases']}C + ${item['focPieces']}P = ${item['focQuantity']}',
-                            style: const TextStyle(fontSize: 12),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              'FOC: ${item['focCases']}C + ${item['focPieces']}P = ${item['focQuantity']}',
+                              style: const TextStyle(fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -1010,10 +1029,14 @@ class _AddInvoiceState extends State<AddInvoice> {
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
                       ),
                       Text(
                         '${item['productCode']} - ${item['brand']} ($unitsPerCase pcs/case)',
                         style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ],
                   ),
@@ -1021,6 +1044,8 @@ class _AddInvoiceState extends State<AddInvoice> {
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red, size: 20),
                   onPressed: () => _removeItem(index),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
