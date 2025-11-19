@@ -28,6 +28,7 @@ class _AddStockState extends State<AddStock> {
   // State variables
   String? _selectedSupplier;
   String? _selectedItemId;
+  String? _selectedDistributionId;
   Map<String, dynamic>? _selectedItemData;
   bool _isLoading = false;
   bool _isLoadingItems = false;
@@ -36,6 +37,7 @@ class _AddStockState extends State<AddStock> {
   List<String> _suppliers = [];
   List<Map<String, dynamic>> _allItems = [];
   List<Map<String, dynamic>> _filteredItems = [];
+  List<Map<String, dynamic>> _distributions = [];
 
   @override
   void initState() {
@@ -79,7 +81,7 @@ class _AddStockState extends State<AddStock> {
   // TODO: Uncomment when Firebase is added
   /// Loads initial data including suppliers and items from Firebase
   Future<void> _loadInitialData() async {
-    await Future.wait([_loadSuppliers(), _loadItems()]);
+    await Future.wait([_loadSuppliers(), _loadItems(), _loadDistributions()]);
   }
 
   /// Fetches all unique suppliers from Firebase items collection
@@ -221,6 +223,31 @@ class _AddStockState extends State<AddStock> {
     }
   }
 
+  /// Fetches all active distributions from Firebase
+  Future<void> _loadDistributions() async {
+    try {
+      final QuerySnapshot distributionsSnapshot = await FirebaseFirestore.instance
+          .collection('distributions')
+          .where('status', isEqualTo: 'active')
+          .get();
+
+      if (mounted) {
+        setState(() {
+          _distributions = distributionsSnapshot.docs
+              .map((doc) => {
+                    'id': doc.id,
+                    ...doc.data() as Map<String, dynamic>,
+                  })
+              .toList();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorSnackBar('Error loading distributions: ${e.toString()}');
+      }
+    }
+  }
+
   /// Filters items based on selected supplier
   void _filterItemsBySupplier(String? supplier) {
     if (supplier == null) {
@@ -268,6 +295,12 @@ class _AddStockState extends State<AddStock> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Distribution Selection Section
+              _buildSectionHeader("Distribution"),
+              const SizedBox(height: 16),
+              _buildDistributionDropdown(),
+              const SizedBox(height: 32),
+
               // Item Selection Section
               _buildSectionHeader("Item Selection"),
               const SizedBox(height: 16),
@@ -665,6 +698,39 @@ class _AddStockState extends State<AddStock> {
     );
   }
 
+  Widget _buildDistributionDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedDistributionId,
+      decoration: _buildInputDecoration(
+        label: 'Distribution *',
+        hint: 'Select distribution',
+        icon: Icons.business_outlined,
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Distribution is required';
+        }
+        return null;
+      },
+      items: _distributions.map((distribution) {
+        return DropdownMenuItem<String>(
+          value: distribution['id'],
+          child: Text(
+            distribution['name'] ?? 'Unknown',
+            style: const TextStyle(fontSize: 14),
+            overflow: TextOverflow.ellipsis,
+          ),
+        );
+      }).toList(),
+      onChanged: (String? newValue) {
+        setState(() {
+          _selectedDistributionId = newValue;
+        });
+      },
+      isExpanded: true,
+    );
+  }
+
   Widget _buildSupplierDropdown() {
     return DropdownButtonFormField<String>(
       value: _selectedSupplier,
@@ -873,6 +939,7 @@ class _AddStockState extends State<AddStock> {
     _focPiecesController.text = '0';
 
     setState(() {
+      _selectedDistributionId = null;
       _selectedSupplier = null;
       _selectedItemId = null;
       _selectedItemData = null;
@@ -913,6 +980,7 @@ class _AddStockState extends State<AddStock> {
       // Prepare stock data
       final stockData = {
         'itemId': _selectedItemId,
+        'distributionId': _selectedDistributionId,
         'productCode': _selectedItemData!['productCode'],
         'productName': _selectedItemData!['productName'],
         'supplier': _selectedSupplier,

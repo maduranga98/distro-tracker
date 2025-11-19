@@ -55,6 +55,13 @@ class _StockViewerState extends State<StockViewer> {
     });
 
     try {
+      // Get all stock items for this distribution (including unloaded stock)
+      final stockSnapshot = await _firestore
+          .collection('stock')
+          .where('distributionId', isEqualTo: distributionId)
+          .where('status', isEqualTo: 'active')
+          .get();
+
       // Get all loadings for this distribution
       final loadingsSnapshot = await _firestore
           .collection('loading')
@@ -71,6 +78,37 @@ class _StockViewerState extends State<StockViewer> {
       // Calculate stock for each item
       Map<String, Map<String, dynamic>> stockMap = {};
 
+      // First, add all stock items from stock collection
+      for (var stock in stockSnapshot.docs) {
+        final data = stock.data();
+        final stockId = stock.id;
+        final itemId = data['itemId'] ?? stockId;
+
+        if (!stockMap.containsKey(itemId)) {
+          stockMap[itemId] = {
+            'itemId': itemId,
+            'productCode': data['productCode'],
+            'productName': data['productName'],
+            'brand': data['brand'],
+            'category': data['category'],
+            'unitType': data['unitType'],
+            'distributorPrice': data['distributorPrice'],
+            'available': data['quantity'] ?? 0, // Stock available (not loaded yet)
+            'loaded': 0,
+            'sold': 0,
+            'returned': 0,
+            'current': 0,
+          };
+        } else {
+          // If item already exists, add to available quantity
+          stockMap[itemId]!['available'] =
+              (stockMap[itemId]!['available'] as int) + (data['quantity'] as int? ?? 0);
+        }
+      }
+
+      // Track loaded quantities from loadings
+      Map<String, int> loadedFromStock = {};
+
       // Add loaded items
       for (var loading in loadingsSnapshot.docs) {
         final data = loading.data();
@@ -78,6 +116,8 @@ class _StockViewerState extends State<StockViewer> {
 
         for (var item in items) {
           final itemId = item['itemId'] ?? item['stockDocId'];
+          final stockDocId = item['stockDocId'];
+
           if (!stockMap.containsKey(itemId)) {
             stockMap[itemId] = {
               'itemId': itemId,
@@ -87,15 +127,22 @@ class _StockViewerState extends State<StockViewer> {
               'category': item['category'],
               'unitType': item['unitType'],
               'distributorPrice': item['distributorPrice'],
+              'available': 0,
               'loaded': 0,
               'sold': 0,
               'returned': 0,
               'current': 0,
             };
           }
+
+          final loadedQty = item['loadingQuantity'] as int? ?? 0;
           stockMap[itemId]!['loaded'] =
-              (stockMap[itemId]!['loaded'] as int) +
-              (item['loadingQuantity'] as int? ?? 0);
+              (stockMap[itemId]!['loaded'] as int) + loadedQty;
+
+          // Track how much was loaded from stock
+          if (stockDocId != null) {
+            loadedFromStock[itemId] = (loadedFromStock[itemId] ?? 0) + loadedQty;
+          }
         }
       }
 
@@ -118,8 +165,19 @@ class _StockViewerState extends State<StockViewer> {
       }
 
       // Calculate current stock
+      // Current = Available (not loaded) + Loaded - Sold + Returned
       stockMap.forEach((key, value) {
-        value['current'] = value['loaded'] - value['sold'] + value['returned'];
+        final available = value['available'] as int;
+        final loaded = value['loaded'] as int;
+        final sold = value['sold'] as int;
+        final returned = value['returned'] as int;
+        final loadedFromStockQty = loadedFromStock[key] ?? 0;
+
+        // Subtract what's been loaded from available stock
+        final actualAvailable = available - loadedFromStockQty;
+
+        // Current = Available + (Loaded - Sold + Returned)
+        value['current'] = actualAvailable + (loaded - sold + returned);
       });
 
       setState(() {
@@ -311,6 +369,10 @@ class _StockViewerState extends State<StockViewer> {
 
   Widget _buildSummaryCards() {
     final totalItems = _stockItems.length;
+    final totalAvailable = _stockItems.fold<int>(
+      0,
+      (sum, item) => sum + (item['available'] as int? ?? 0),
+    );
     final totalLoaded = _stockItems.fold<int>(
       0,
       (sum, item) => sum + (item['loaded'] as int),
@@ -350,13 +412,17 @@ class _StockViewerState extends State<StockViewer> {
               ),
               Expanded(
                 child: _buildSummaryItem(
+                  'Available',
+                  '$totalAvailable',
+                  Colors.purple,
+                ),
+              ),
+              Expanded(
+                child: _buildSummaryItem(
                   'Loaded',
                   '$totalLoaded',
                   Colors.green,
                 ),
-              ),
-              Expanded(
-                child: _buildSummaryItem('Sold', '$totalSold', Colors.orange),
               ),
             ],
           ),
@@ -364,17 +430,19 @@ class _StockViewerState extends State<StockViewer> {
           Row(
             children: [
               Expanded(
+                child: _buildSummaryItem('Sold', '$totalSold', Colors.orange),
+              ),
+              Expanded(
                 child: _buildSummaryItem(
                   'Current',
                   '$totalCurrent',
-                  Colors.purple,
+                  Colors.indigo,
                 ),
               ),
               Expanded(
-                flex: 2,
                 child: _buildSummaryItem(
-                  'Total Value',
-                  'Rs. ${totalValue.toStringAsFixed(2)}',
+                  'Value',
+                  'Rs. ${totalValue.toStringAsFixed(0)}',
                   Colors.teal,
                 ),
               ),
@@ -410,6 +478,7 @@ class _StockViewerState extends State<StockViewer> {
   }
 
   Widget _buildStockCard(Map<String, dynamic> item) {
+    final available = item['available'] as int? ?? 0;
     final loaded = item['loaded'] as int;
     final sold = item['sold'] as int;
     final returned = item['returned'] as int;
@@ -506,6 +575,10 @@ class _StockViewerState extends State<StockViewer> {
               ),
               child: Column(
                 children: [
+                  if (available > 0) ...[
+                    _buildStockRow('Available (Not Loaded):', available, Colors.purple),
+                    const SizedBox(height: 4),
+                  ],
                   _buildStockRow('Loaded:', loaded, Colors.blue),
                   const SizedBox(height: 4),
                   _buildStockRow('Sold:', sold, Colors.orange),
