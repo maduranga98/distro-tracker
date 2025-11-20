@@ -104,6 +104,7 @@ class _NTBBankPaymentsScreenState extends State<NTBBankPaymentsScreen> {
                     border: OutlineInputBorder(),
                   ),
                   value: _selectedDistributionId,
+                  isExpanded: true,
                   items: distributions.map((doc) {
                     final data = doc.data() as Map<String, dynamic>;
                     return DropdownMenuItem(
@@ -115,11 +116,15 @@ class _NTBBankPaymentsScreenState extends State<NTBBankPaymentsScreen> {
                           Text(
                             data['name'] ?? '',
                             style: const TextStyle(fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                           Text(
                             'Bank Account: ${data['bankAccount'] ?? 'N/A'}',
                             style: const TextStyle(
                                 fontSize: 12, color: Colors.grey),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ],
                       ),

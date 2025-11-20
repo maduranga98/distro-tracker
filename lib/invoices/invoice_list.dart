@@ -16,6 +16,8 @@ class _InvoiceListState extends State<InvoiceList> {
   String? _selectedSupplier;
   DateTime? _startDate;
   DateTime? _endDate;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   List<Map<String, dynamic>> _distributions = [];
   List<Map<String, dynamic>> _suppliers = [];
@@ -29,6 +31,12 @@ class _InvoiceListState extends State<InvoiceList> {
     super.initState();
     _loadDistributions();
     _loadSuppliers();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadDistributions() async {
@@ -149,6 +157,8 @@ class _InvoiceListState extends State<InvoiceList> {
       _selectedSupplier = null;
       _startDate = null;
       _endDate = null;
+      _searchQuery = '';
+      _searchController.clear();
     });
   }
 
@@ -233,6 +243,38 @@ class _InvoiceListState extends State<InvoiceList> {
       ),
       body: Column(
         children: [
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by Invoice Number or ID...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          setState(() {
+                            _searchController.clear();
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[50],
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.toLowerCase().trim();
+                });
+              },
+            ),
+          ),
           // Filters Summary
           if (_selectedDistribution != null ||
               _selectedSupplier != null ||
@@ -412,7 +454,17 @@ class _InvoiceListState extends State<InvoiceList> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final invoices = snapshot.data?.docs ?? [];
+                var invoices = snapshot.data?.docs ?? [];
+
+                // Filter by search query if present
+                if (_searchQuery.isNotEmpty) {
+                  invoices = invoices.where((doc) {
+                    final data = doc.data();
+                    final invoiceNumber = (data['invoiceNumber'] ?? '').toString().toLowerCase();
+                    final invoiceId = doc.id.toLowerCase();
+                    return invoiceNumber.contains(_searchQuery) || invoiceId.contains(_searchQuery);
+                  }).toList();
+                }
 
                 // Calculate totals only once when data changes
                 if (snapshot.hasData) {
