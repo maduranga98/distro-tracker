@@ -675,127 +675,116 @@ class _AddInvoiceState extends State<AddInvoice> {
   }
 
   Widget _buildAddItemsStep() {
-    return SingleChildScrollView(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          minHeight: MediaQuery.of(context).size.height -
-                     MediaQuery.of(context).padding.top -
-                     AppBar().preferredSize.height - 180,
-        ),
-        child: IntrinsicHeight(
+    return Column(
+      children: [
+        // Search Section
+        Padding(
+          padding: const EdgeInsets.all(16.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Search Section
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Add Items to Invoice',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _searchController,
-                      decoration: const InputDecoration(
-                        labelText: 'Search Items',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.search),
-                        hintText: 'Search by name, code, or brand',
-                      ),
-                      onChanged: _filterItems,
-                    ),
-                    const SizedBox(height: 8),
-                    if (_searchController.text.isNotEmpty &&
-                        _filteredItems.isNotEmpty)
-                      Container(
-                        constraints: BoxConstraints(
-                          maxHeight: MediaQuery.of(context).size.height * 0.3,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(4),
-                          color: Colors.white,
-                        ),
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: _filteredItems.length,
-                          itemBuilder: (context, index) {
-                            final item = _filteredItems[index];
-                            return ListTile(
-                              dense: true,
-                              title: Text(
-                                item['productName'],
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                              subtitle: Text(
-                                '${item['productCode']} - ${item['brand']}',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              trailing: Text(
-                                'Rs. ${item['mrp'].toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              onTap: () => _addItemToInvoice(item),
-                            );
-                          },
-                        ),
-                      ),
-                  ],
+              const Text(
+                'Add Items to Invoice',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _searchController,
+                decoration: const InputDecoration(
+                  labelText: 'Search Items',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.search),
+                  hintText: 'Search by name, code, or brand',
+                ),
+                onChanged: _filterItems,
+              ),
+              const SizedBox(height: 8),
+              if (_searchController.text.isNotEmpty &&
+                  _filteredItems.isNotEmpty)
+                Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.3,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(4),
+                    color: Colors.white,
+                  ),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _filteredItems.length,
+                    itemBuilder: (context, index) {
+                      final item = _filteredItems[index];
+                      return ListTile(
+                        dense: true,
+                        title: Text(
+                          item['productName'],
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        subtitle: Text(
+                          '${item['productCode']} - ${item['brand']}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        trailing: Text(
+                          'Rs. ${item['mrp'].toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        onTap: () => _addItemToInvoice(item),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
 
-              // Items List
-              if (_invoiceItems.isEmpty)
-                Expanded(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.inventory_outlined,
-                            size: 64, color: Colors.grey[400]),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No items added',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
-                          ),
+        // Items List
+        Expanded(
+          child: _invoiceItems.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.inventory_outlined,
+                          size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No items added',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey[600],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Search and add items to the invoice',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Search and add items to the invoice',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[500],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 )
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              : ListView.builder(
+                  padding: const EdgeInsets.only(
+                    left: 16.0,
+                    right: 16.0,
+                    bottom: 16.0,
+                  ),
                   itemCount: _invoiceItems.length,
                   itemBuilder: (context, index) {
                     return _buildInvoiceItem(index);
                   },
                 ),
-              const SizedBox(height: 100),
-            ],
-          ),
         ),
-      ),
+      ],
     );
   }
 
