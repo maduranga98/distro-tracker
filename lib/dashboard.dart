@@ -15,6 +15,7 @@ import 'package:distro_tracker_flutter/reports/daily_reports.dart';
 import 'package:distro_tracker_flutter/reports/daily_unloading_details.dart';
 import 'package:distro_tracker_flutter/invoices/invoice_list.dart';
 import 'package:distro_tracker_flutter/analytics/business_analytics_dashboard.dart';
+import 'package:distro_tracker_flutter/ntb/ntb_bank_payments.dart';
 
 class Dashboard extends StatelessWidget {
   const Dashboard({super.key});
@@ -140,6 +141,27 @@ class Dashboard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // Bank & Finance Section
+            _buildSectionTitle('Bank & Finance'),
+            const SizedBox(height: 12),
+            _buildDashboardCard(
+              context,
+              title: 'NTB Bank Payments',
+              subtitle: 'Track loan payments to bank',
+              icon: Icons.account_balance,
+              color: Colors.deepPurple,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const NTBBankPaymentsScreen(),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 24),
