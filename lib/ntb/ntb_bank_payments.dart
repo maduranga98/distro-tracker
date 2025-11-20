@@ -218,8 +218,119 @@ class _NTBBankPaymentsScreenState extends State<NTBBankPaymentsScreen> {
           );
         }
 
-        return _buildPaymentsTable(snapshot.data!.docs);
+        return Column(
+          children: [
+            _buildSummaryCard(snapshot.data!.docs),
+            Expanded(child: _buildPaymentsTable(snapshot.data!.docs)),
+          ],
+        );
       },
+    );
+  }
+
+  Widget _buildSummaryCard(List<QueryDocumentSnapshot> payments) {
+    double totalCredit = 0;
+    double totalCash = 0;
+    double totalCheque = 0;
+
+    for (var payment in payments) {
+      final data = payment.data() as Map<String, dynamic>;
+      totalCredit += (data['creditValue'] ?? 0).toDouble();
+
+      final cashEntries = data['cashEntries'] as List<dynamic>? ?? [];
+      final chequeEntries = data['chequeEntries'] as List<dynamic>? ?? [];
+
+      for (var entry in cashEntries) {
+        totalCash += (entry['amount'] ?? 0).toDouble();
+      }
+      for (var entry in chequeEntries) {
+        totalCheque += (entry['amount'] ?? 0).toDouble();
+      }
+    }
+
+    final totalDeposits = totalCash + totalCheque;
+    final balance = totalCredit - totalDeposits;
+
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Summary',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSummaryItem(
+                    'Total Credit',
+                    totalCredit,
+                    Colors.orange,
+                  ),
+                ),
+                Expanded(
+                  child: _buildSummaryItem(
+                    'Total Cash',
+                    totalCash,
+                    Colors.green,
+                  ),
+                ),
+                Expanded(
+                  child: _buildSummaryItem(
+                    'Total Cheque',
+                    totalCheque,
+                    Colors.blue,
+                  ),
+                ),
+                Expanded(
+                  child: _buildSummaryItem(
+                    'Balance',
+                    balance,
+                    balance > 0 ? Colors.red : Colors.green,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(String label, double value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Rs. ${value.toStringAsFixed(2)}',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -242,123 +353,145 @@ class _NTBBankPaymentsScreenState extends State<NTBBankPaymentsScreen> {
       });
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.vertical,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: DataTable(
-            headingRowColor: MaterialStateProperty.all(Colors.deepPurple.shade50),
-            columns: const [
-              DataColumn(label: Text('Date', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Cash (Rs.)', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Cheque No.', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Cheque (Rs.)', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Credit (Rs.)', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Balance (Rs.)', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
-            ],
-            rows: paymentsWithCumulative.reversed.map((item) {
-              final data = item['data'] as Map<String, dynamic>;
-              final cumulative = item['cumulative'] as double;
-              final paymentId = item['id'] as String;
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: paymentsWithCumulative.reversed.length,
+      itemBuilder: (context, index) {
+        final item = paymentsWithCumulative.reversed.toList()[index];
+        final data = item['data'] as Map<String, dynamic>;
+        final cumulative = item['cumulative'] as double;
+        final paymentId = item['id'] as String;
 
-              final date = (data['date'] as Timestamp).toDate();
-              final cashEntries = data['cashEntries'] as List<dynamic>? ?? [];
-              final chequeEntries = data['chequeEntries'] as List<dynamic>? ?? [];
-              final creditValue = (data['creditValue'] ?? 0).toDouble();
+        final date = (data['date'] as Timestamp).toDate();
+        final cashEntries = data['cashEntries'] as List<dynamic>? ?? [];
+        final chequeEntries = data['chequeEntries'] as List<dynamic>? ?? [];
+        final creditValue = (data['creditValue'] ?? 0).toDouble();
+        final totalDeposits = _calculateTotalDeposits(data);
 
-              // Create rows for each entry
-              final maxEntries = cashEntries.length > chequeEntries.length
-                  ? cashEntries.length
-                  : chequeEntries.length;
-
-              if (maxEntries == 0) {
-                // Single row if no entries
-                return DataRow(
-                  cells: [
-                    DataCell(Text(DateFormat('yyyy-MM-dd').format(date))),
-                    const DataCell(Text('-')),
-                    const DataCell(Text('-')),
-                    const DataCell(Text('-')),
-                    DataCell(Text(
-                      creditValue.toStringAsFixed(2),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    )),
-                    DataCell(
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 2,
+          child: ExpansionTile(
+            title: Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    DateFormat('yyyy-MM-dd').format(date),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        cumulative.toStringAsFixed(2),
+                        'Credit: Rs. ${creditValue.toStringAsFixed(2)}',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                      Text(
+                        'Deposits: Rs. ${totalDeposits.toStringAsFixed(2)}',
+                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'Balance: Rs. ${cumulative.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: cumulative > 0 ? Colors.red : Colors.green,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit, size: 20),
+                  onPressed: () => _showEditPaymentDialog(paymentId, data),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                  onPressed: () => _deletePayment(paymentId),
+                ),
+              ],
+            ),
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (cashEntries.isNotEmpty) ...[
+                      const Text(
+                        'Cash Deposits:',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: cumulative > 0 ? Colors.red : Colors.green,
+                          fontSize: 14,
                         ),
                       ),
-                    ),
-                    DataCell(
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, size: 20),
-                            onPressed: () => _showEditPaymentDialog(paymentId, data),
+                      const SizedBox(height: 8),
+                      ...cashEntries.asMap().entries.map((entry) {
+                        final idx = entry.key;
+                        final cashEntry = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(left: 16, bottom: 4),
+                          child: Text(
+                            '${idx + 1}. Rs. ${(cashEntry['amount'] ?? 0).toStringAsFixed(2)}',
+                            style: const TextStyle(fontSize: 13),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                            onPressed: () => _deletePayment(paymentId),
-                          ),
-                        ],
+                        );
+                      }),
+                      const SizedBox(height: 12),
+                    ],
+                    if (chequeEntries.isNotEmpty) ...[
+                      const Text(
+                        'Cheque Deposits:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      ...chequeEntries.asMap().entries.map((entry) {
+                        final idx = entry.key;
+                        final chequeEntry = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(left: 16, bottom: 4),
+                          child: Text(
+                            '${idx + 1}. Cheque No: ${chequeEntry['chequeNumber']} - Rs. ${(chequeEntry['amount'] ?? 0).toStringAsFixed(2)}',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 12),
+                    ],
+                    if (cashEntries.isEmpty && chequeEntries.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(left: 16),
+                        child: Text(
+                          'No cash or cheque deposits recorded',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
                   ],
-                );
-              }
-
-              // Return first row (we'll handle multiple entries differently)
-              return DataRow(
-                cells: [
-                  DataCell(Text(DateFormat('yyyy-MM-dd').format(date))),
-                  DataCell(Text(cashEntries.isNotEmpty
-                      ? (cashEntries[0]['amount'] ?? 0).toStringAsFixed(2)
-                      : '-')),
-                  DataCell(Text(chequeEntries.isNotEmpty
-                      ? (chequeEntries[0]['chequeNumber'] ?? '-')
-                      : '-')),
-                  DataCell(Text(chequeEntries.isNotEmpty
-                      ? (chequeEntries[0]['amount'] ?? 0).toStringAsFixed(2)
-                      : '-')),
-                  DataCell(Text(
-                    creditValue.toStringAsFixed(2),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  )),
-                  DataCell(
-                    Text(
-                      cumulative.toStringAsFixed(2),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: cumulative > 0 ? Colors.red : Colors.green,
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, size: 20),
-                          onPressed: () => _showEditPaymentDialog(paymentId, data),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                          onPressed: () => _deletePayment(paymentId),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
+                ),
+              ),
+            ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -550,8 +683,11 @@ class _NTBBankPaymentsScreenState extends State<NTBBankPaymentsScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text(editId == null ? 'Add Payment' : 'Edit Payment'),
-          content: SizedBox(
-            width: 500,
+          content: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.9,
+              maxHeight: MediaQuery.of(context).size.height * 0.7,
+            ),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -581,11 +717,31 @@ class _NTBBankPaymentsScreenState extends State<NTBBankPaymentsScreen> {
                   TextField(
                     controller: creditValueController,
                     decoration: const InputDecoration(
-                      labelText: 'Credit Value (Rs.) *',
-                      hintText: 'Amount to pay to bank',
+                      labelText: 'Credit Value (Rs.)',
+                      hintText: 'Amount to pay to bank (optional)',
                     ),
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'You can add cash/cheques for multiple days without credit data',
+                            style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 24),
                   const Text(
@@ -700,11 +856,10 @@ class _NTBBankPaymentsScreenState extends State<NTBBankPaymentsScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (dateController.text.isEmpty ||
-                    creditValueController.text.isEmpty) {
+                if (dateController.text.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Please fill date and credit value'),
+                      content: Text('Please select a date'),
                     ),
                   );
                   return;
@@ -732,11 +887,24 @@ class _NTBBankPaymentsScreenState extends State<NTBBankPaymentsScreen> {
                   }
                 }
 
+                // Parse credit value (can be empty/0)
+                final creditValue = double.tryParse(creditValueController.text) ?? 0.0;
+
+                // Validate: at least one entry (credit, cash, or cheque) must be present
+                if (creditValue <= 0 && cashEntriesData.isEmpty && chequeEntriesData.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter at least one value (credit, cash, or cheque)'),
+                    ),
+                  );
+                  return;
+                }
+
                 final data = {
                   'distributionId': _selectedDistributionId,
                   'date': Timestamp.fromDate(
                       DateFormat('yyyy-MM-dd').parse(dateController.text)),
-                  'creditValue': double.parse(creditValueController.text),
+                  'creditValue': creditValue,
                   'cashEntries': cashEntriesData,
                   'chequeEntries': chequeEntriesData,
                   'updatedAt': FieldValue.serverTimestamp(),
