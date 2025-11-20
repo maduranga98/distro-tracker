@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'add_invoice.dart';
 
 class InvoiceDetails extends StatefulWidget {
   final String invoiceId;
@@ -93,6 +94,19 @@ class _InvoiceDetailsState extends State<InvoiceDetails> {
         title: Text('Invoice ${_invoice!['invoiceNumber'] ?? 'N/A'}'),
         backgroundColor: Colors.blue,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddInvoice(
+                    invoiceId: widget.invoiceId,
+                  ),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.share),
             onPressed: () {
