@@ -3,7 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 class AddInvoice extends StatefulWidget {
-  const AddInvoice({Key? key}) : super(key: key);
+  final String? invoiceId;
+
+  const AddInvoice({Key? key, this.invoiceId}) : super(key: key);
 
   @override
   _AddInvoiceState createState() => _AddInvoiceState();
@@ -25,6 +27,8 @@ class _AddInvoiceState extends State<AddInvoice> {
   List<Map<String, dynamic>> _invoiceItems = [];
 
   bool _isLoading = false;
+  bool _isEditMode = false;
+  List<Map<String, dynamic>> _originalInvoiceItems = [];
   double _totalValue = 0.0;
   double _totalProfit = 0.0;
   int _totalQuantity = 0;
@@ -34,9 +38,13 @@ class _AddInvoiceState extends State<AddInvoice> {
   @override
   void initState() {
     super.initState();
+    _isEditMode = widget.invoiceId != null;
     _loadDistributions();
     _loadSuppliers();
     _loadItems();
+    if (_isEditMode) {
+      _loadInvoice();
+    }
   }
 
   Future<void> _loadDistributions() async {
@@ -106,6 +114,58 @@ class _AddInvoiceState extends State<AddInvoice> {
       });
     } catch (e) {
       _showError('Error loading items: $e');
+    }
+  }
+
+  Future<void> _loadInvoice() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final doc = await FirebaseFirestore.instance
+          .collection('invoices')
+          .doc(widget.invoiceId)
+          .get();
+
+      if (!doc.exists) {
+        _showError('Invoice not found');
+        if (mounted) {
+          Navigator.pop(context);
+        }
+        return;
+      }
+
+      final invoiceData = doc.data() as Map<String, dynamic>;
+
+      setState(() {
+        _invoiceNumberController.text = invoiceData['invoiceNumber'] ?? '';
+        _selectedDistribution = invoiceData['distributionId'];
+        _selectedSupplier = invoiceData['supplier'];
+        _invoiceDate = (invoiceData['invoiceDate'] as Timestamp).toDate();
+
+        // Load invoice items
+        final items = (invoiceData['items'] as List<dynamic>?) ?? [];
+        _invoiceItems = items.map((item) {
+          return Map<String, dynamic>.from(item as Map);
+        }).toList();
+
+        // Store a copy of the original items for comparison
+        _originalInvoiceItems = _invoiceItems.map((item) {
+          return Map<String, dynamic>.from(item);
+        }).toList();
+
+        _calculateTotals();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      _showError('Error loading invoice: $e');
+      if (mounted) {
+        Navigator.pop(context);
+      }
     }
   }
 
@@ -254,14 +314,20 @@ class _AddInvoiceState extends State<AddInvoice> {
       return;
     }
 
-    // Validate that all items have quantity and purchase price
+    // Validate that all items have quantity or free issues, and purchase price
     for (var item in _invoiceItems) {
-      if ((item['quantity'] ?? 0) <= 0) {
-        _showError('All items must have a quantity greater than 0');
+      final quantity = (item['quantity'] ?? 0);
+      final focQuantity = (item['focQuantity'] ?? 0);
+
+      // Allow items with only free issues (no quantity required if FOC exists)
+      if (quantity <= 0 && focQuantity <= 0) {
+        _showError('All items must have either a quantity or free issues greater than 0');
         return;
       }
-      if ((item['purchasePrice'] ?? 0) <= 0) {
-        _showError('All items must have a purchase price greater than 0');
+
+      // Purchase price is required only if there's a paid quantity
+      if (quantity > 0 && (item['purchasePrice'] ?? 0) <= 0) {
+        _showError('Items with quantity must have a purchase price greater than 0');
         return;
       }
     }
@@ -271,43 +337,84 @@ class _AddInvoiceState extends State<AddInvoice> {
     });
 
     try {
-      // Save invoice to Firestore
       final distributionName = _distributions.firstWhere(
         (d) => d['id'] == _selectedDistribution,
         orElse: () => {'name': 'Unknown'},
       )['name'];
 
-      final invoiceRef = await FirebaseFirestore.instance
-          .collection('invoices')
-          .add({
-            'invoiceNumber': _invoiceNumberController.text,
-            'distributionId': _selectedDistribution,
-            'distributionName': distributionName,
-            'supplier': _selectedSupplier,
-            'invoiceDate': Timestamp.fromDate(_invoiceDate),
-            'items': _invoiceItems,
-            'totalQuantity': _totalQuantity,
-            'totalFOC': _totalFOC,
-            'totalValue': _totalValue,
-            'totalProfit': _totalProfit,
-            'status': 'received',
-            'createdAt': FieldValue.serverTimestamp(),
-            'lastUpdated': FieldValue.serverTimestamp(),
-          });
+      final invoiceData = {
+        'invoiceNumber': _invoiceNumberController.text,
+        'distributionId': _selectedDistribution,
+        'distributionName': distributionName,
+        'supplier': _selectedSupplier,
+        'invoiceDate': Timestamp.fromDate(_invoiceDate),
+        'items': _invoiceItems,
+        'totalQuantity': _totalQuantity,
+        'totalFOC': _totalFOC,
+        'totalValue': _totalValue,
+        'totalProfit': _totalProfit,
+        'status': 'received',
+        'lastUpdated': FieldValue.serverTimestamp(),
+      };
 
-      // Update stock for each item in the invoice
-      for (var item in _invoiceItems) {
-        await _updateStock(item, invoiceRef.id);
-      }
+      String invoiceId;
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invoice saved successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
+      if (_isEditMode) {
+        // Update existing invoice
+        invoiceId = widget.invoiceId!;
+        await FirebaseFirestore.instance
+            .collection('invoices')
+            .doc(invoiceId)
+            .update(invoiceData);
+
+        // Delete all existing stock entries for this invoice
+        final stockQuery = await FirebaseFirestore.instance
+            .collection('stock')
+            .where('invoiceId', isEqualTo: invoiceId)
+            .get();
+
+        final batch = FirebaseFirestore.instance.batch();
+        for (var doc in stockQuery.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+
+        // Create new stock entries for all current items
+        for (var item in _invoiceItems) {
+          await _updateStock(item, invoiceId);
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invoice updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context);
+        }
+      } else {
+        // Create new invoice
+        invoiceData['createdAt'] = FieldValue.serverTimestamp();
+        final invoiceRef = await FirebaseFirestore.instance
+            .collection('invoices')
+            .add(invoiceData);
+        invoiceId = invoiceRef.id;
+
+        // Create stock entries for each item in the invoice
+        for (var item in _invoiceItems) {
+          await _updateStock(item, invoiceId);
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invoice saved successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       _showError('Error saving invoice: $e');
@@ -380,7 +487,7 @@ class _AddInvoiceState extends State<AddInvoice> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Receive Invoice'),
+        title: Text(_isEditMode ? 'Edit Invoice' : 'Receive Invoice'),
         backgroundColor: Colors.blue,
       ),
       body: _isLoading

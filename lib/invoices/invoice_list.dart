@@ -176,6 +176,20 @@ class _InvoiceListState extends State<InvoiceList> {
 
     if (confirm == true) {
       try {
+        // First, delete all stock entries associated with this invoice
+        final stockQuery = await FirebaseFirestore.instance
+            .collection('stock')
+            .where('invoiceId', isEqualTo: invoiceId)
+            .get();
+
+        // Delete all stock entries in a batch
+        final batch = FirebaseFirestore.instance.batch();
+        for (var doc in stockQuery.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+
+        // Then delete the invoice itself
         await FirebaseFirestore.instance
             .collection('invoices')
             .doc(invoiceId)
@@ -183,8 +197,10 @@ class _InvoiceListState extends State<InvoiceList> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Invoice deleted successfully'),
+            SnackBar(
+              content: Text(
+                'Invoice and ${stockQuery.docs.length} stock entries deleted successfully',
+              ),
               backgroundColor: Colors.green,
             ),
           );
@@ -486,6 +502,16 @@ class _InvoiceListState extends State<InvoiceList> {
                                         ),
                                       ),
                                       const PopupMenuItem(
+                                        value: 'edit',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.edit, size: 20),
+                                            SizedBox(width: 8),
+                                            Text('Edit'),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem(
                                         value: 'delete',
                                         child: Row(
                                           children: [
@@ -514,6 +540,15 @@ class _InvoiceListState extends State<InvoiceList> {
                                                 InvoiceDetails(
                                                   invoiceId: invoiceId,
                                                 ),
+                                          ),
+                                        );
+                                      } else if (value == 'edit') {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => AddInvoice(
+                                              invoiceId: invoiceId,
+                                            ),
                                           ),
                                         );
                                       } else if (value == 'delete') {
