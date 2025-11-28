@@ -323,11 +323,18 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
   // Expenses
   final List<Map<String, dynamic>> _expenses = [];
 
+  // Free Issues (separate section for adding multiple free issue items)
+  final List<Map<String, dynamic>> _freeIssues = [];
+
+  // Damage Items (separate section for adding multiple damaged items)
+  final List<Map<String, dynamic>> _damageItems = [];
+
   // Returns and Damages (using cases and pieces)
   final Map<String, Map<String, int>> _itemAdjustments = {};
   final Map<String, int> _itemUnitsPerCase = {};
 
   bool _isLoading = false;
+  bool _showCalculationSteps = false;
 
   @override
   void initState() {
@@ -411,6 +418,14 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
                   _buildDiscountsSection(),
                   const SizedBox(height: 16),
 
+                  // Free Issues Section
+                  _buildFreeIssuesSection(),
+                  const SizedBox(height: 16),
+
+                  // Damage Items Section
+                  _buildDamageItemsSection(),
+                  const SizedBox(height: 16),
+
                   // Expenses Section
                   _buildExpensesSection(),
                   const SizedBox(height: 16),
@@ -419,9 +434,17 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
                   _buildPaymentsSection(),
                   const SizedBox(height: 16),
 
-                  // Summary
-                  _buildFinalSummary(totalValue),
-                  const SizedBox(height: 80),
+                  // Calculate Button
+                  _buildCalculateButton(),
+                  const SizedBox(height: 16),
+
+                  // Summary (shown after calculate is clicked)
+                  if (_showCalculationSteps) ...[
+                    _buildFinalSummary(totalValue),
+                    const SizedBox(height: 80),
+                  ] else ...[
+                    const SizedBox(height: 80),
+                  ],
                 ],
               ),
             ),
@@ -821,7 +844,7 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
                 const Icon(Icons.discount, color: Colors.purple),
                 const SizedBox(width: 8),
                 const Text(
-                  'Discounts & Additional Free Issues',
+                  'Discounts',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -849,26 +872,230 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _freeIssuesController,
-              decoration: const InputDecoration(
-                labelText: 'Additional Free Issues Given',
-                hintText: '0',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.card_giftcard),
-              ),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  if (int.tryParse(value) == null) {
-                    return 'Enter valid number';
-                  }
-                }
-                return null;
-              },
-            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFreeIssuesSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.card_giftcard, color: Colors.green),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Free Issues Given',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_circle, color: Colors.green),
+                  onPressed: _addFreeIssue,
+                ),
+              ],
+            ),
+            if (_freeIssues.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: Text(
+                    'No free issues added. Tap + to add.',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+              )
+            else
+              ..._freeIssues.asMap().entries.map((entry) {
+                final index = entry.key;
+                final freeIssue = entry.value;
+                return Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              freeIssue['productName'].toString(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Quantity: ${freeIssue['quantity']} units',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                            if (freeIssue['notes'].toString().isNotEmpty)
+                              Text(
+                                freeIssue['notes'],
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                        onPressed: () => _removeFreeIssue(index),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDamageItemsSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.broken_image, color: Colors.red),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Damaged Items',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_circle, color: Colors.red),
+                  onPressed: _addDamageItem,
+                ),
+              ],
+            ),
+            if (_damageItems.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: Text(
+                    'No damage items added. Tap + to add.',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+              )
+            else
+              ..._damageItems.asMap().entries.map((entry) {
+                final index = entry.key;
+                final damageItem = entry.value;
+                return Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              damageItem['productName'].toString(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Quantity: ${damageItem['quantity']} units',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                            if (damageItem['reason'].toString().isNotEmpty)
+                              Text(
+                                'Reason: ${damageItem['reason']}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                        onPressed: () => _removeDamageItem(index),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCalculateButton() {
+    return Card(
+      color: Colors.blue[600],
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _showCalculationSteps = !_showCalculationSteps;
+          });
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.calculate, color: Colors.white, size: 28),
+              const SizedBox(width: 12),
+              Text(
+                _showCalculationSteps ? 'Hide Calculation' : 'Show Calculation',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1095,6 +1322,9 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
     final cheque = double.tryParse(_chequeController.text) ?? 0.0;
 
     final totalExpenses = _expenses.fold<double>(0.0, (sum, exp) => sum + (exp['amount'] as double));
+    final totalFreeIssuesQty = _freeIssues.fold<int>(0, (sum, item) => sum + (item['quantity'] as int));
+    final totalDamageQty = _damageItems.fold<int>(0, (sum, item) => sum + (item['quantity'] as int));
+
     final netSalesValue = totalValue - discounts;
     final totalPayments = cash + creditReceived + cheque;
     final balance = netSalesValue - totalPayments - credit - totalExpenses;
@@ -1111,30 +1341,188 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
                 const Icon(Icons.calculate, color: Colors.blue),
                 const SizedBox(width: 8),
                 const Text(
-                  'Final Summary',
+                  'Calculation Summary',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    fontSize: 18,
                   ),
                 ),
               ],
             ),
             const Divider(height: 24),
-            _buildSummaryRow('Gross Sales:', 'Rs. ${totalValue.toStringAsFixed(2)}'),
-            _buildSummaryRow('Discounts:', '- Rs. ${discounts.toStringAsFixed(2)}'),
-            _buildSummaryRow('Net Sales:', 'Rs. ${netSalesValue.toStringAsFixed(2)}', isBold: true),
-            const Divider(height: 16),
-            _buildSummaryRow('Cash Received:', 'Rs. ${cash.toStringAsFixed(2)}'),
-            _buildSummaryRow('Cheque Received:', 'Rs. ${cheque.toStringAsFixed(2)}'),
-            _buildSummaryRow('Old Credit Received:', 'Rs. ${creditReceived.toStringAsFixed(2)}'),
-            _buildSummaryRow('New Credit Given:', 'Rs. ${credit.toStringAsFixed(2)}'),
-            _buildSummaryRow('Trip Expenses:', 'Rs. ${totalExpenses.toStringAsFixed(2)}'),
-            const Divider(height: 16),
-            _buildSummaryRow(
-              'Balance:',
-              'Rs. ${balance.toStringAsFixed(2)}',
-              isBold: true,
-              color: balance >= 0 ? Colors.green : Colors.red,
+
+            // Sales Calculation Section
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Sales Calculation:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildSummaryRow('Gross Sales Value:', 'Rs. ${totalValue.toStringAsFixed(2)}'),
+                  _buildSummaryRow('Less: Discounts:', '- Rs. ${discounts.toStringAsFixed(2)}'),
+                  const Divider(height: 12),
+                  _buildSummaryRow('Net Sales Value:', 'Rs. ${netSalesValue.toStringAsFixed(2)}', isBold: true, color: Colors.green[800]),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Free Issues & Damages Section
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Additional Information:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildSummaryRow('Free Issues Given:', '$totalFreeIssuesQty units'),
+                  _buildSummaryRow('Damaged Items:', '$totalDamageQty units'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Payments Calculation Section
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.teal[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Payments Calculation:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.teal,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildSummaryRow('Cash Received:', '+ Rs. ${cash.toStringAsFixed(2)}'),
+                  _buildSummaryRow('Cheque Received:', '+ Rs. ${cheque.toStringAsFixed(2)}'),
+                  _buildSummaryRow('Old Credit Received:', '+ Rs. ${creditReceived.toStringAsFixed(2)}'),
+                  const Divider(height: 12),
+                  _buildSummaryRow('Total Received:', 'Rs. ${totalPayments.toStringAsFixed(2)}', isBold: true),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Deductions Section
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Deductions:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.red,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildSummaryRow('New Credit Given:', '- Rs. ${credit.toStringAsFixed(2)}'),
+                  _buildSummaryRow('Trip Expenses:', '- Rs. ${totalExpenses.toStringAsFixed(2)}'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Final Balance
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: balance >= 0 ? Colors.green[600] : Colors.red[600],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Calculation Steps:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Net Sales (${netSalesValue.toStringAsFixed(2)}) - Total Received (${totalPayments.toStringAsFixed(2)}) - Credit Given (${credit.toStringAsFixed(2)}) - Expenses (${totalExpenses.toStringAsFixed(2)})',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const Divider(height: 16, color: Colors.white38),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Final Balance:',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Rs. ${balance.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    balance >= 0 ? 'Amount to be returned to office' : 'Shortage amount',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1269,6 +1657,263 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
     });
   }
 
+  void _addFreeIssue() async {
+    // Get available items from Firestore
+    final itemsSnapshot = await _firestore.collection('items').get();
+    final availableItems = itemsSnapshot.docs.map((doc) {
+      return {
+        'id': doc.id,
+        'productName': doc['productName'] ?? '',
+        'productCode': doc['productCode'] ?? '',
+      };
+    }).toList();
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        final quantityController = TextEditingController();
+        final notesController = TextEditingController();
+        String? selectedItemId;
+        String selectedItemName = '';
+        final formKey = GlobalKey<FormState>();
+
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('Add Free Issue'),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: selectedItemId,
+                      decoration: const InputDecoration(
+                        labelText: 'Select Item',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: availableItems.map((item) {
+                        return DropdownMenuItem<String>(
+                          value: item['id'] as String,
+                          child: Text('${item['productCode']} - ${item['productName']}'),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedItemId = value;
+                          selectedItemName = availableItems.firstWhere(
+                            (item) => item['id'] == value,
+                            orElse: () => {'productName': ''},
+                          )['productName'] as String;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select an item';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: quantityController,
+                      decoration: const InputDecoration(
+                        labelText: 'Quantity',
+                        border: OutlineInputBorder(),
+                        hintText: '0',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Quantity is required';
+                        }
+                        if (int.tryParse(value) == null || int.parse(value) <= 0) {
+                          return 'Enter valid quantity';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: notesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Notes (optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 2,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (formKey.currentState!.validate()) {
+                    this.setState(() {
+                      _freeIssues.add({
+                        'itemId': selectedItemId,
+                        'productName': selectedItemName,
+                        'quantity': int.parse(quantityController.text),
+                        'notes': notesController.text.trim(),
+                      });
+                    });
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text('Add'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _removeFreeIssue(int index) {
+    setState(() {
+      _freeIssues.removeAt(index);
+    });
+  }
+
+  void _addDamageItem() async {
+    // Get available items from Firestore
+    final itemsSnapshot = await _firestore.collection('items').get();
+    final availableItems = itemsSnapshot.docs.map((doc) {
+      return {
+        'id': doc.id,
+        'productName': doc['productName'] ?? '',
+        'productCode': doc['productCode'] ?? '',
+      };
+    }).toList();
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        final quantityController = TextEditingController();
+        final reasonController = TextEditingController();
+        String? selectedItemId;
+        String selectedItemName = '';
+        final formKey = GlobalKey<FormState>();
+
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('Add Damaged Item'),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: selectedItemId,
+                      decoration: const InputDecoration(
+                        labelText: 'Select Item',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: availableItems.map((item) {
+                        return DropdownMenuItem<String>(
+                          value: item['id'] as String,
+                          child: Text('${item['productCode']} - ${item['productName']}'),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedItemId = value;
+                          selectedItemName = availableItems.firstWhere(
+                            (item) => item['id'] == value,
+                            orElse: () => {'productName': ''},
+                          )['productName'] as String;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select an item';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: quantityController,
+                      decoration: const InputDecoration(
+                        labelText: 'Quantity',
+                        border: OutlineInputBorder(),
+                        hintText: '0',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Quantity is required';
+                        }
+                        if (int.tryParse(value) == null || int.parse(value) <= 0) {
+                          return 'Enter valid quantity';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: reasonController,
+                      decoration: const InputDecoration(
+                        labelText: 'Reason',
+                        border: OutlineInputBorder(),
+                        hintText: 'Why is it damaged?',
+                      ),
+                      maxLines: 2,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please provide a reason';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (formKey.currentState!.validate()) {
+                    this.setState(() {
+                      _damageItems.add({
+                        'itemId': selectedItemId,
+                        'productName': selectedItemName,
+                        'quantity': int.parse(quantityController.text),
+                        'reason': reasonController.text.trim(),
+                      });
+                    });
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text('Add'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _removeDamageItem(int index) {
+    setState(() {
+      _damageItems.removeAt(index);
+    });
+  }
+
   Future<void> _saveUnloading() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -1307,7 +1952,6 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
       }).toList();
 
       final discounts = double.tryParse(_discountController.text) ?? 0.0;
-      final additionalFreeIssues = int.tryParse(_freeIssuesController.text) ?? 0;
       final cash = double.tryParse(_cashController.text) ?? 0.0;
       final credit = double.tryParse(_creditController.text) ?? 0.0;
       final creditReceived = double.tryParse(_creditReceivedController.text) ?? 0.0;
@@ -1319,6 +1963,10 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
       final totalExpenses = _expenses.fold<double>(0.0, (sum, exp) => sum + (exp['amount'] as double));
       final totalPayments = cash + creditReceived + cheque;
       final balance = netValue - totalPayments - credit - totalExpenses;
+
+      // Calculate total free issues and damage quantities
+      final totalFreeIssuesQty = _freeIssues.fold<int>(0, (sum, item) => sum + (item['quantity'] as int));
+      final totalDamageQty = _damageItems.fold<int>(0, (sum, item) => sum + (item['quantity'] as int));
 
       final unloadingData = {
         'loadingDocId': widget.loadingDocId,
@@ -1333,9 +1981,12 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
         'totalQuantity': totalSoldQty,
         'totalReturns': totalReturns,
         'totalDamaged': totalDamaged,
-        'totalFreeIssues': totalFreeIssuesFromLoading + additionalFreeIssues,
+        'totalFreeIssues': totalFreeIssuesFromLoading + totalFreeIssuesQty,
         'freeIssuesFromLoading': totalFreeIssuesFromLoading,
-        'additionalFreeIssues': additionalFreeIssues,
+        'additionalFreeIssues': _freeIssues,
+        'damageItems': _damageItems,
+        'totalAdditionalFreeIssuesQty': totalFreeIssuesQty,
+        'totalDamageItemsQty': totalDamageQty,
         'grossValue': totalValue,
         'totalDiscounts': discounts,
         'netValue': netValue,
