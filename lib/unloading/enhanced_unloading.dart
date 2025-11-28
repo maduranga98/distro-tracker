@@ -323,13 +323,10 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
   // Expenses
   final List<Map<String, dynamic>> _expenses = [];
 
-  // Free Issues (separate section for adding multiple free issue items)
-  final List<Map<String, dynamic>> _freeIssues = [];
-
   // Damage Items (separate section for adding multiple damaged items)
   final List<Map<String, dynamic>> _damageItems = [];
 
-  // Returns and Damages (using cases and pieces)
+  // Returns, Damages, and Free Issues (using cases and pieces)
   final Map<String, Map<String, int>> _itemAdjustments = {};
   final Map<String, int> _itemUnitsPerCase = {};
 
@@ -354,6 +351,9 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
         'damagedCases': 0,
         'damagedPieces': 0,
         'damaged': 0,
+        'freeIssuesCases': 0,
+        'freeIssuesPieces': 0,
+        'freeIssuesGiven': 0,
       };
       // Store unitsPerCase for calculations
       final unitsPerCase = (itemMap['unitsPerCase'] as int?) ?? 1;
@@ -416,10 +416,6 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
 
                   // Discounts Section
                   _buildDiscountsSection(),
-                  const SizedBox(height: 16),
-
-                  // Free Issues Section
-                  _buildFreeIssuesSection(),
                   const SizedBox(height: 16),
 
                   // Damage Items Section
@@ -795,6 +791,110 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
+
+                    // Free Issues Section (only show if item has free issues)
+                    if ((itemMap['freeIssues'] ?? 0) > 0) ...[
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.green[50],
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.card_giftcard, size: 14, color: Colors.green[900]),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Free Issues (Loaded: ${itemMap['freeIssues']} units)',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.green[900],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    initialValue: _itemAdjustments[itemId]!['freeIssuesCases'].toString(),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Cases Given',
+                                      border: OutlineInputBorder(),
+                                      isDense: true,
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _itemAdjustments[itemId]!['freeIssuesCases'] = int.tryParse(value) ?? 0;
+                                        _itemAdjustments[itemId]!['freeIssuesGiven'] =
+                                          (_itemAdjustments[itemId]!['freeIssuesCases']! * unitsPerCase) +
+                                          _itemAdjustments[itemId]!['freeIssuesPieces']!;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextFormField(
+                                    initialValue: _itemAdjustments[itemId]!['freeIssuesPieces'].toString(),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Pieces Given',
+                                      border: OutlineInputBorder(),
+                                      isDense: true,
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _itemAdjustments[itemId]!['freeIssuesPieces'] = int.tryParse(value) ?? 0;
+                                        _itemAdjustments[itemId]!['freeIssuesGiven'] =
+                                          (_itemAdjustments[itemId]!['freeIssuesCases']! * unitsPerCase) +
+                                          _itemAdjustments[itemId]!['freeIssuesPieces']!;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green[200],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'Total',
+                                        style: TextStyle(fontSize: 9, color: Colors.grey[700]),
+                                      ),
+                                      Text(
+                                        '${_itemAdjustments[itemId]!['freeIssuesGiven']}',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green[900],
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -878,101 +978,6 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
     );
   }
 
-  Widget _buildFreeIssuesSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.card_giftcard, color: Colors.green),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Free Issues Given',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-                IconButton(
-                  icon: const Icon(Icons.add_circle, color: Colors.green),
-                  onPressed: _addFreeIssue,
-                ),
-              ],
-            ),
-            if (_freeIssues.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Center(
-                  child: Text(
-                    'No free issues added. Tap + to add.',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ),
-              )
-            else
-              ..._freeIssues.asMap().entries.map((entry) {
-                final index = entry.key;
-                final freeIssue = entry.value;
-                return Container(
-                  margin: const EdgeInsets.only(top: 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.green[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              freeIssue['productName'].toString(),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Quantity: ${freeIssue['quantity']} units',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                            if (freeIssue['notes'].toString().isNotEmpty)
-                              Text(
-                                freeIssue['notes'],
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                        onPressed: () => _removeFreeIssue(index),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildDamageItemsSection() {
     return Card(
@@ -1322,7 +1327,13 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
     final cheque = double.tryParse(_chequeController.text) ?? 0.0;
 
     final totalExpenses = _expenses.fold<double>(0.0, (sum, exp) => sum + (exp['amount'] as double));
-    final totalFreeIssuesQty = _freeIssues.fold<int>(0, (sum, item) => sum + (item['quantity'] as int));
+
+    // Calculate total free issues given from item adjustments
+    int totalFreeIssuesQty = 0;
+    for (var adjustment in _itemAdjustments.values) {
+      totalFreeIssuesQty += adjustment['freeIssuesGiven'] as int;
+    }
+
     final totalDamageQty = _damageItems.fold<int>(0, (sum, item) => sum + (item['quantity'] as int));
 
     final netSalesValue = totalValue - discounts;
@@ -1657,130 +1668,6 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
     });
   }
 
-  void _addFreeIssue() async {
-    // Get available items from Firestore
-    final itemsSnapshot = await _firestore.collection('items').get();
-    final availableItems = itemsSnapshot.docs.map((doc) {
-      return {
-        'id': doc.id,
-        'productName': doc['productName'] ?? '',
-        'productCode': doc['productCode'] ?? '',
-      };
-    }).toList();
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        final quantityController = TextEditingController();
-        final notesController = TextEditingController();
-        String? selectedItemId;
-        String selectedItemName = '';
-        final formKey = GlobalKey<FormState>();
-
-        return StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            title: const Text('Add Free Issue'),
-            content: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DropdownButtonFormField<String>(
-                      value: selectedItemId,
-                      decoration: const InputDecoration(
-                        labelText: 'Select Item',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: availableItems.map((item) {
-                        return DropdownMenuItem<String>(
-                          value: item['id'] as String,
-                          child: Text('${item['productCode']} - ${item['productName']}'),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedItemId = value;
-                          selectedItemName = availableItems.firstWhere(
-                            (item) => item['id'] == value,
-                            orElse: () => {'productName': ''},
-                          )['productName'] as String;
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null) {
-                          return 'Please select an item';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: quantityController,
-                      decoration: const InputDecoration(
-                        labelText: 'Quantity',
-                        border: OutlineInputBorder(),
-                        hintText: '0',
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Quantity is required';
-                        }
-                        if (int.tryParse(value) == null || int.parse(value) <= 0) {
-                          return 'Enter valid quantity';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: notesController,
-                      decoration: const InputDecoration(
-                        labelText: 'Notes (optional)',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 2,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (formKey.currentState!.validate()) {
-                    this.setState(() {
-                      _freeIssues.add({
-                        'itemId': selectedItemId,
-                        'productName': selectedItemName,
-                        'quantity': int.parse(quantityController.text),
-                        'notes': notesController.text.trim(),
-                      });
-                    });
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text('Add'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _removeFreeIssue(int index) {
-    setState(() {
-      _freeIssues.removeAt(index);
-    });
-  }
 
   void _addDamageItem() async {
     // Get available items from Firestore
@@ -1931,22 +1818,26 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
       int totalFreeIssuesFromLoading = 0;
 
       // Calculate adjusted items
+      int totalFreeIssuesGiven = 0;
       final adjustedItems = items.map((item) {
         final itemMap = Map<String, dynamic>.from(item as Map<String, dynamic>);
         final itemId = itemMap['itemId'] ?? '';
         final loadingQty = (itemMap['loadingQuantity'] as int?) ?? 0;
         final returns = _itemAdjustments[itemId]!['returns']!;
         final damaged = _itemAdjustments[itemId]!['damaged']!;
+        final freeIssuesGiven = _itemAdjustments[itemId]!['freeIssuesGiven']!;
         final actualSold = loadingQty - returns - damaged;
 
         totalSoldQty += actualSold;
         totalReturns += returns;
         totalDamaged += damaged;
         totalFreeIssuesFromLoading += (itemMap['freeIssues'] as int?) ?? 0;
+        totalFreeIssuesGiven += freeIssuesGiven;
 
         itemMap['returns'] = returns;
         itemMap['damaged'] = damaged;
         itemMap['actualSold'] = actualSold;
+        itemMap['freeIssuesGiven'] = freeIssuesGiven;
 
         return itemMap;
       }).toList();
@@ -1964,8 +1855,7 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
       final totalPayments = cash + creditReceived + cheque;
       final balance = netValue - totalPayments - credit - totalExpenses;
 
-      // Calculate total free issues and damage quantities
-      final totalFreeIssuesQty = _freeIssues.fold<int>(0, (sum, item) => sum + (item['quantity'] as int));
+      // Calculate total damage quantities
       final totalDamageQty = _damageItems.fold<int>(0, (sum, item) => sum + (item['quantity'] as int));
 
       final unloadingData = {
@@ -1981,11 +1871,10 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
         'totalQuantity': totalSoldQty,
         'totalReturns': totalReturns,
         'totalDamaged': totalDamaged,
-        'totalFreeIssues': totalFreeIssuesFromLoading + totalFreeIssuesQty,
+        'totalFreeIssues': totalFreeIssuesFromLoading,
+        'totalFreeIssuesGiven': totalFreeIssuesGiven,
         'freeIssuesFromLoading': totalFreeIssuesFromLoading,
-        'additionalFreeIssues': _freeIssues,
         'damageItems': _damageItems,
-        'totalAdditionalFreeIssuesQty': totalFreeIssuesQty,
         'totalDamageItemsQty': totalDamageQty,
         'grossValue': totalValue,
         'totalDiscounts': discounts,
