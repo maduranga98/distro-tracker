@@ -190,7 +190,8 @@ class _AddInvoiceState extends State<AddInvoice> {
 
   void _addItemToInvoice(Map<String, dynamic> item) {
     setState(() {
-      _invoiceItems.add({
+      // Insert at the beginning of the list so it appears at the top
+      _invoiceItems.insert(0, {
         'itemId': item['id'],
         'productCode': item['productCode'],
         'productName': item['productName'],
@@ -845,6 +846,49 @@ class _AddInvoiceState extends State<AddInvoice> {
                         onTap: () => _addItemToInvoice(item),
                       );
                     },
+                  ),
+                ),
+            ],
+          ),
+        ),
+
+        // Separator between search and items list
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            border: Border(
+              top: BorderSide(color: Colors.grey[300]!, width: 2),
+              bottom: BorderSide(color: Colors.grey[300]!, width: 2),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.list_alt, size: 20, color: Colors.blue[700]),
+              const SizedBox(width: 8),
+              Text(
+                'Items Added to Invoice (${_invoiceItems.length})',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.blue[700],
+                ),
+              ),
+              const Spacer(),
+              if (_invoiceItems.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[600],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    _invoiceItems.length.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
             ],
