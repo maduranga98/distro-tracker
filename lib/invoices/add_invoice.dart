@@ -146,8 +146,13 @@ class _AddInvoiceState extends State<AddInvoice> {
 
         // Load invoice items
         final items = (invoiceData['items'] as List<dynamic>?) ?? [];
-        _invoiceItems = items.map((item) {
-          return Map<String, dynamic>.from(item as Map);
+        _invoiceItems = items.asMap().entries.map((entry) {
+          final item = Map<String, dynamic>.from(entry.value as Map);
+          // Add unique key if not present (for existing invoices)
+          if (!item.containsKey('_uniqueKey')) {
+            item['_uniqueKey'] = '${item['itemId']}_${entry.key}_${DateTime.now().millisecondsSinceEpoch}';
+          }
+          return item;
         }).toList();
 
         // Store a copy of the original items for comparison
@@ -199,19 +204,22 @@ class _AddInvoiceState extends State<AddInvoice> {
         'category': item['category'],
         'unitType': item['unitType'],
         'unitsPerCase': item['unitsPerCase'] ?? 1,
-        'cases': 0,
-        'pieces': 0,
+        'cases': null,
+        'pieces': null,
         'quantity': 0,
-        'focCases': 0,
-        'focPieces': 0,
+        'focCases': null,
+        'focPieces': null,
         'focQuantity': 0,
-        'purchasePrice': 0.0,
+        'casePrice': null,
+        'purchasePrice': null,
         'sellingPrice': item['sellingPrice'],
         'mrp': item['mrp'],
         'margin': 0.0,
         'marginPercentage': 0.0,
         'lineTotal': 0.0,
         'lineProfit': 0.0,
+        // Add a unique key for this item to prevent Flutter from reusing widgets
+        '_uniqueKey': '${item['id']}_${DateTime.now().millisecondsSinceEpoch}',
       });
       _searchController.clear();
       _filteredItems = List.from(_items);
@@ -228,6 +236,15 @@ class _AddInvoiceState extends State<AddInvoice> {
   void _updateItemField(int index, String field, dynamic value) {
     setState(() {
       _invoiceItems[index][field] = value;
+
+      // Auto-calculate per-unit purchase price from case price
+      if (field == 'casePrice') {
+        final unitsPerCase = (_invoiceItems[index]['unitsPerCase'] ?? 1).toInt();
+        final casePrice = value;
+        if (casePrice != null && casePrice > 0 && unitsPerCase > 0) {
+          _invoiceItems[index]['purchasePrice'] = casePrice / unitsPerCase;
+        }
+      }
 
       // Auto-calculate quantity from cases and pieces
       if (field == 'cases' || field == 'pieces') {
@@ -250,7 +267,8 @@ class _AddInvoiceState extends State<AddInvoice> {
           field == 'sellingPrice' ||
           field == 'quantity' ||
           field == 'cases' ||
-          field == 'pieces') {
+          field == 'pieces' ||
+          field == 'casePrice') {
         final purchasePrice = (_invoiceItems[index]['purchasePrice'] ?? 0)
             .toDouble();
         final sellingPrice = (_invoiceItems[index]['sellingPrice'] ?? 0)
@@ -343,13 +361,26 @@ class _AddInvoiceState extends State<AddInvoice> {
         orElse: () => {'name': 'Unknown'},
       )['name'];
 
+      // Convert null values to 0 for all items before saving
+      final itemsToSave = _invoiceItems.map((item) {
+        return {
+          ...item,
+          'cases': item['cases'] ?? 0,
+          'pieces': item['pieces'] ?? 0,
+          'focCases': item['focCases'] ?? 0,
+          'focPieces': item['focPieces'] ?? 0,
+          'casePrice': item['casePrice'] ?? 0.0,
+          'purchasePrice': item['purchasePrice'] ?? 0.0,
+        };
+      }).toList();
+
       final invoiceData = {
         'invoiceNumber': _invoiceNumberController.text,
         'distributionId': _selectedDistribution,
         'distributionName': distributionName,
         'supplier': _selectedSupplier,
         'invoiceDate': Timestamp.fromDate(_invoiceDate),
-        'items': _invoiceItems,
+        'items': itemsToSave,
         'totalQuantity': _totalQuantity,
         'totalFOC': _totalFOC,
         'totalValue': _totalValue,
@@ -443,14 +474,15 @@ class _AddInvoiceState extends State<AddInvoice> {
         'distributionId': _selectedDistribution,
         'distributionName': distributionName,
         'supplier': _selectedSupplier,
-        'quantity': item['quantity'],
+        'quantity': item['quantity'] ?? 0,
         'focUnits': item['focQuantity'] ?? 0,
-        'purchasePrice': item['purchasePrice'],
-        'sellingPrice': item['sellingPrice'],
-        'mrp': item['mrp'],
-        'margin': item['margin'],
-        'marginPercentage': item['marginPercentage'],
-        'totalValue': item['lineTotal'],
+        'casePrice': item['casePrice'] ?? 0.0,
+        'purchasePrice': item['purchasePrice'] ?? 0.0,
+        'sellingPrice': item['sellingPrice'] ?? 0.0,
+        'mrp': item['mrp'] ?? 0.0,
+        'margin': item['margin'] ?? 0.0,
+        'marginPercentage': item['marginPercentage'] ?? 0.0,
+        'totalValue': item['lineTotal'] ?? 0.0,
         'invoiceId': invoiceId,
         'invoiceNumber': _invoiceNumberController.text,
         'status': 'active',
@@ -1174,6 +1206,7 @@ class _AddInvoiceState extends State<AddInvoice> {
     final unitsPerCase = (item['unitsPerCase'] ?? 1).toInt();
 
     return Card(
+      key: ValueKey(item['_uniqueKey'] ?? '${item['itemId']}_$index'),
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -1237,9 +1270,11 @@ class _AddInvoiceState extends State<AddInvoice> {
                     children: [
                       Expanded(
                         child: TextFormField(
-                          initialValue: item['cases'].toString(),
+                          key: ValueKey('${item['_uniqueKey']}_cases'),
+                          initialValue: item['cases']?.toString() ?? '',
                           decoration: const InputDecoration(
                             labelText: 'Cases',
+                            hintText: '0',
                             border: OutlineInputBorder(),
                             isDense: true,
                           ),
@@ -1248,7 +1283,7 @@ class _AddInvoiceState extends State<AddInvoice> {
                             _updateItemField(
                               index,
                               'cases',
-                              int.tryParse(value) ?? 0,
+                              value.isEmpty ? null : (int.tryParse(value) ?? 0),
                             );
                           },
                         ),
@@ -1256,9 +1291,11 @@ class _AddInvoiceState extends State<AddInvoice> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: TextFormField(
-                          initialValue: item['pieces'].toString(),
+                          key: ValueKey('${item['_uniqueKey']}_pieces'),
+                          initialValue: item['pieces']?.toString() ?? '',
                           decoration: const InputDecoration(
                             labelText: 'Pieces',
+                            hintText: '0',
                             border: OutlineInputBorder(),
                             isDense: true,
                           ),
@@ -1267,7 +1304,7 @@ class _AddInvoiceState extends State<AddInvoice> {
                             _updateItemField(
                               index,
                               'pieces',
-                              int.tryParse(value) ?? 0,
+                              value.isEmpty ? null : (int.tryParse(value) ?? 0),
                             );
                           },
                         ),
@@ -1327,9 +1364,11 @@ class _AddInvoiceState extends State<AddInvoice> {
                     children: [
                       Expanded(
                         child: TextFormField(
-                          initialValue: item['focCases'].toString(),
+                          key: ValueKey('${item['_uniqueKey']}_focCases'),
+                          initialValue: item['focCases']?.toString() ?? '',
                           decoration: const InputDecoration(
                             labelText: 'FOC Cases',
+                            hintText: '0',
                             border: OutlineInputBorder(),
                             isDense: true,
                           ),
@@ -1338,7 +1377,7 @@ class _AddInvoiceState extends State<AddInvoice> {
                             _updateItemField(
                               index,
                               'focCases',
-                              int.tryParse(value) ?? 0,
+                              value.isEmpty ? null : (int.tryParse(value) ?? 0),
                             );
                           },
                         ),
@@ -1346,9 +1385,11 @@ class _AddInvoiceState extends State<AddInvoice> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: TextFormField(
-                          initialValue: item['focPieces'].toString(),
+                          key: ValueKey('${item['_uniqueKey']}_focPieces'),
+                          initialValue: item['focPieces']?.toString() ?? '',
                           decoration: const InputDecoration(
                             labelText: 'FOC Pieces',
+                            hintText: '0',
                             border: OutlineInputBorder(),
                             isDense: true,
                           ),
@@ -1357,7 +1398,7 @@ class _AddInvoiceState extends State<AddInvoice> {
                             _updateItemField(
                               index,
                               'focPieces',
-                              int.tryParse(value) ?? 0,
+                              value.isEmpty ? null : (int.tryParse(value) ?? 0),
                             );
                           },
                         ),
@@ -1395,46 +1436,84 @@ class _AddInvoiceState extends State<AddInvoice> {
             ),
             const SizedBox(height: 8),
             // Pricing
-            Row(
+            Column(
               children: [
-                Expanded(
-                  child: TextFormField(
-                    initialValue: item['purchasePrice'].toString(),
-                    decoration: const InputDecoration(
-                      labelText: 'Purchase Price',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                      prefixText: 'Rs. ',
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) {
-                      _updateItemField(
-                        index,
-                        'purchasePrice',
-                        double.tryParse(value) ?? 0.0,
-                      );
-                    },
+                // Case Price (new feature)
+                TextFormField(
+                  key: ValueKey('${item['_uniqueKey']}_casePrice'),
+                  initialValue: item['casePrice']?.toString() ?? '',
+                  decoration: InputDecoration(
+                    labelText: 'Case Price',
+                    hintText: '0.00',
+                    helperText: 'Price per case (will auto-calculate per unit price)',
+                    helperMaxLines: 2,
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                    prefixText: 'Rs. ',
+                    fillColor: Colors.green[50],
+                    filled: true,
                   ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (value) {
+                    _updateItemField(
+                      index,
+                      'casePrice',
+                      value.isEmpty ? null : (double.tryParse(value)),
+                    );
+                  },
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextFormField(
-                    initialValue: item['sellingPrice'].toString(),
-                    decoration: const InputDecoration(
-                      labelText: 'Selling Price',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                      prefixText: 'Rs. ',
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        key: ValueKey('${item['_uniqueKey']}_purchasePrice'),
+                        initialValue: item['purchasePrice']?.toString() ?? '',
+                        decoration: InputDecoration(
+                          labelText: 'Purchase Price (per unit)',
+                          hintText: '0.00',
+                          border: const OutlineInputBorder(),
+                          isDense: true,
+                          prefixText: 'Rs. ',
+                          fillColor: (item['casePrice'] != null && item['casePrice'] > 0)
+                              ? Colors.green[50]
+                              : null,
+                          filled: (item['casePrice'] != null && item['casePrice'] > 0),
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        enabled: (item['casePrice'] == null || item['casePrice'] == 0),
+                        onChanged: (value) {
+                          _updateItemField(
+                            index,
+                            'purchasePrice',
+                            value.isEmpty ? null : (double.tryParse(value)),
+                          );
+                        },
+                      ),
                     ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) {
-                      _updateItemField(
-                        index,
-                        'sellingPrice',
-                        double.tryParse(value) ?? 0.0,
-                      );
-                    },
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        key: ValueKey('${item['_uniqueKey']}_sellingPrice'),
+                        initialValue: item['sellingPrice']?.toString() ?? '',
+                        decoration: const InputDecoration(
+                          labelText: 'Selling Price',
+                          hintText: '0.00',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                          prefixText: 'Rs. ',
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        onChanged: (value) {
+                          _updateItemField(
+                            index,
+                            'sellingPrice',
+                            value.isEmpty ? null : (double.tryParse(value)),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
