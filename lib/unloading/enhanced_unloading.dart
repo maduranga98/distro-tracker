@@ -792,31 +792,30 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
                     ),
                     const SizedBox(height: 8),
 
-                    // Free Issues Section (only show if item has free issues)
-                    if ((itemMap['freeIssues'] ?? 0) > 0) ...[
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.green[50],
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.card_giftcard, size: 14, color: Colors.green[900]),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Free Issues (Loaded: ${itemMap['freeIssues']} units)',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.green[900],
-                                  ),
+                    // Free Issues Section (show for all items)
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.green[50],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.card_giftcard, size: 14, color: Colors.green[900]),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Free Issues Given to Customer${(itemMap['freeIssues'] ?? 0) > 0 ? ' (Loaded: ${itemMap['freeIssues']} units)' : ''}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.green[900],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
+                          ),
                             const SizedBox(height: 8),
                             Row(
                               children: [
@@ -892,8 +891,7 @@ class _UnloadingFormScreenState extends State<UnloadingFormScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 8),
-                    ],
+                    const SizedBox(height: 8),
 
                     Container(
                       padding: const EdgeInsets.all(8),

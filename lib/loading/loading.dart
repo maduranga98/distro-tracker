@@ -33,7 +33,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
   @override
   void initState() {
     super.initState();
-    _loadItems();
+    // Don't load items in initState - wait for distribution selection
   }
 
   @override
@@ -42,8 +42,8 @@ class _LoadingScreenState extends State<LoadingScreen> {
     super.dispose();
   }
 
-  /// Loads items from Firebase with current stock
-  Future<void> _loadItems() async {
+  /// Loads items from Firebase with current stock filtered by distribution
+  Future<void> _loadItems(String distributionId) async {
     setState(() {
       _isLoading = true;
     });
@@ -51,6 +51,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
     try {
       final QuerySnapshot itemsSnapshot = await _firestore
           .collection('stock')
+          .where('distributionId', isEqualTo: distributionId)
           .where('status', isEqualTo: 'active')
           .where('quantity', isGreaterThan: 0)
           .orderBy('quantity')
@@ -328,6 +329,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
       // Clear selections
       setState(() {
         _selectedItems.clear();
+        _items.clear();
         _selectedDistributionId = null;
         _selectedRouteId = null;
         _selectedVehicleId = null;
@@ -336,8 +338,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
         _routes.clear();
       });
 
-      // Reload items to reflect updated stock
-      _loadItems();
+      // Items will be reloaded when new distribution is selected
     } catch (e) {
       if (!mounted) return;
       _showErrorSnackBar('Error saving loading: ${e.toString()}');
@@ -974,9 +975,12 @@ class _LoadingScreenState extends State<LoadingScreen> {
                       _selectedDistributionId = value;
                       _selectedRouteId = null;
                       _routes = [];
+                      _items = [];
+                      _selectedItems.clear();
                       if (value != null) {
                         _loadVehicles(value);
                         _loadRoutes(value);
+                        _loadItems(value);
                       }
                     });
                   },
